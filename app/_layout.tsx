@@ -1,10 +1,11 @@
+import { Inter_400Regular, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts, Inter_400Regular, Inter_700Bold } from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import React = require('react');
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

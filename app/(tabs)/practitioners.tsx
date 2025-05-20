@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import AppHeader from '../../components/AppHeader';
+import React = require('react');
+
 
 export default function PraticiensScreen() {
   return (

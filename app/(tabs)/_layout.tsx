@@ -1,11 +1,14 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React = require('react');
 import { Calendar, Hospital, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        tabBarStyle:{
+          height:70,
+        },
         tabBarActiveTintColor: '#5671DA',
         tabBarInactiveTintColor: '#B0B0B0',
         headerShown: false,
