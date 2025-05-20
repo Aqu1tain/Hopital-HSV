@@ -1,13 +1,6 @@
-React Base
-https://medium.com/@claudeando/setting-up-a-react-project-without-create-react-app-6ff7fea9ca51
-React router
-https://medium.com/getpieces/react-router-v6-a-comprehensive-guide-to-page-routing-in-react-8f6078d69991
-
-import React from 'react';
-
-import { createRoot } from 'react-dom/client';
-import App from './App';  
-
-const container = document.getElementById('root');
-const root = createRoot(container);
-root.render(<App />);
+# App design
+![App Splash screen](docs/images/Loading.png)
+![App Doctors screen](docs/images/Praticiens.png)
+![App profile screen](docs/images/Profil.png)
+![App meeting screen](docs/images/RDVs.png)
+![App Doctor Profile screen](docs/images/Praticiens-Single.png)
