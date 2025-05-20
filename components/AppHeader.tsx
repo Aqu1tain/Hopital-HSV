@@ -1,22 +1,19 @@
 import { View, Text, StyleSheet } from 'react-native';
-import AppHeader from '../../components/AppHeader';
+import { Bell } from 'lucide-react-native';
 
-export default function HomeScreen() {
+export default function AppHeader() {
   return (
-    <View style={styles.screen}>
-      <AppHeader />
-      <View style={styles.container}>
-        <Text style={styles.title}>Bienvenue dans votre nouvelle app !</Text>
+    <View style={styles.header}>
+      <View style={styles.headerTextContainer}>
+        <Text style={styles.headerGreeting}>Bonjour</Text>
+        <Text style={styles.headerName}><Text style={{fontWeight: 'bold', fontFamily: 'Inter-Bold'}}>Valentin LAMOUCHE</Text></Text>
       </View>
+      <Bell color="#222" size={22} style={styles.bellIcon} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -40,20 +37,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#222',
     marginTop: 2,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
   },
   bellIcon: {
     marginLeft: 16,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222',
-    fontFamily: 'Inter',
   },
 });
