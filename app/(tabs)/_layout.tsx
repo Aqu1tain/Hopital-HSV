@@ -18,7 +18,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="practitioners"
         options={{
           title: 'Praticiens',
           tabBarIcon: ({ color }) => <Hospital color={color} size={24} />, // hospital icon
