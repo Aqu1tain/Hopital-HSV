@@ -9,7 +9,7 @@ export default function HomeScreen() {
           <Text style={styles.headerGreeting}>Bonjour</Text>
           <Text style={styles.headerName}><Text style={{fontWeight: 'bold'}}>Valentin LAMOUCHE</Text></Text>
         </View>
-        <Bell color="#222" size={28} style={styles.bellIcon} />
+        <Bell color="#222" size={22} style={styles.bellIcon} />
       </View>
     </View>
   );
@@ -37,11 +37,13 @@ const styles = StyleSheet.create({
   headerGreeting: {
     fontSize: 16,
     color: '#444',
+    fontFamily: 'Inter',
   },
   headerName: {
     fontSize: 18,
     color: '#222',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   bellIcon: {
     marginLeft: 16,
@@ -55,5 +57,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#222',
+    fontFamily: 'Inter',
   },
 });
