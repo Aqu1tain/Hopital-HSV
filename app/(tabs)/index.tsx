@@ -1,12 +1,31 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import AppHeader from '../../components/AppHeader';
+
+type Props = {
+  title: string;
+  onPress: (event: GestureResponderEvent) => void;
+};
+
+const RDVButton: React.FC<Props> = ({title,onPress}) => {
+  return (
+    <TouchableOpacity style={styles.button} onPress={onPress}>
+      <Text style={styles.buttonText}>{title}</Text>
+    </TouchableOpacity>
+      
+  );
+};
 
 export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader />
       <View style={styles.container}>
-        <Text style={styles.title}>Bienvenue dans votre nouvelle app !</Text>
+        <Text style={styles.typicalText}>Vous n’avez pas de rendez-vous prévu aujourd’hui.</Text>
+        <RDVButton
+          title="Prendre un rendez vous"
+          onPress={() => alert('Bouton appuyé')}
+        />
+      <Text style={styles.title}>Bienvenue dans votre nouvelle app !</Text>
       </View>
     </View>
   );
@@ -16,6 +35,38 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  typicalText: {
+    color: '#000',
+    textAlign: 'right',
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: 500,
+    fontStyle: 'normal',
+    lineHeight: 500,
+  },
+  button: {
+    width: '60%',
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
+    opacity: 0.9,
+    borderRadius: 10,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#2E4FD1E5',
+  },
+  buttonText: {
+    color: '#FFF',
+    textAlign: 'right',
+    fontFamily: 'Inter',
+    fontSize: 15, 
+    fontStyle: 'normal',
+    fontWeight: '700',
+    lineHeight: undefined, 
   },
   header: {
     flexDirection: 'row',
