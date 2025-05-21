@@ -1,12 +1,17 @@
 import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import AppHeader from '../../components/AppHeader';
 
-type Props = {
+type RDVBtn = {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
 };
 
-const RDVButton: React.FC<Props> = ({title,onPress}) => {
+type Card = {
+  doctorName: string;
+  details: string;
+}
+
+const RDVButton: React.FC<RDVBtn> = ({title,onPress}) => {
   return (
     <TouchableOpacity style={styles.button} onPress={onPress}>
       <Text style={styles.buttonText}>{title}</Text>
@@ -15,17 +20,28 @@ const RDVButton: React.FC<Props> = ({title,onPress}) => {
   );
 };
 
+const CardPrac: React.FC<Card> = ({doctorName,details}) => {
+  return (
+    //<View
+  )
+}
+
 export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader />
       <View style={styles.container}>
-        <Text style={styles.typicalText}>Vous n’avez pas de rendez-vous prévu aujourd’hui.</Text>
+        <Text style={[styles.typicalText, { lineHeight:50 }]}>Vous n’avez pas de rendez-vous prévu aujourd’hui.</Text>
         <RDVButton
           title="Prendre un rendez vous"
           onPress={() => alert('Bouton appuyé')}
         />
-      <Text style={styles.title}>Bienvenue dans votre nouvelle app !</Text>
+      </View>
+      <View style={styles.header}>
+        <Text style={styles.typicalText}>Vos prochains rendez-vous</Text>
+        <View style={styles.header}>
+
+        </View>
       </View>
     </View>
   );
@@ -38,12 +54,10 @@ const styles = StyleSheet.create({
   },
   typicalText: {
     color: '#000',
-    textAlign: 'right',
     fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: 500,
     fontStyle: 'normal',
-    lineHeight: 500,
   },
   button: {
     width: '60%',
@@ -66,7 +80,6 @@ const styles = StyleSheet.create({
     fontSize: 15, 
     fontStyle: 'normal',
     fontWeight: '700',
-    lineHeight: undefined, 
   },
   header: {
     flexDirection: 'row',
