@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import AppHeader from '../../components/AppHeader';
-<<<<<<< HEAD
 import { useCallback, useEffect, useState } from 'react';
 import Entypo from '@expo/vector-icons/Entypo';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,17 +11,7 @@ SplashScreen.setOptions({
   duration: 1000,
   fade: true,
 });
-=======
-import { SplashScreen } from 'expo-router';
->>>>>>> 3e31db72d4220ed5c1e00cdbf95a81676244f6aa
 
-
-SplashScreen.preventAutoHideAsync();
-
-SplashScreen.set0ptions({
-  duration: 1000,
-  fade: true,
-})
 type Props = {
   title: string;
   onPress: (event: GestureResponderEvent) => void;
@@ -171,8 +160,4 @@ const styles = StyleSheet.create({
   },
 });
 
-<<<<<<< HEAD
 export default splashScreen;
-=======
-
->>>>>>> 3e31db72d4220ed5c1e00cdbf95a81676244f6aa
