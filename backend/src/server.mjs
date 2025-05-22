@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
@@ -16,6 +17,16 @@ const supabase = createClient(
 
 // Express setup
 const app = express();
+
+// CORS for dev: allow Expo/React Native and local frontend
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://127.0.0.1:8081',
+    'http://localhost:8081'
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 // Multer for file uploads (in-memory)
@@ -65,6 +76,7 @@ async function sendOtp(email) {
 
   // Envoyer l'email
   try {
+    console.log('About to send mail to', email);
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
