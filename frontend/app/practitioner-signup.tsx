@@ -45,10 +45,11 @@ export default function PractitionerSignup() {
 
   const pickProof = async () => {
     const res = await DocumentPicker.getDocumentAsync({ type: '*/*' });
-    if (res.type === 'success') {
-      setProof(res);
+    if (!res.canceled && res.assets && res.assets.length > 0) {
+      setProof(res.assets[0]);
     }
   };
+
 
   const handleSubmit = async () => {
     setError('');
