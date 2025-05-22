@@ -19,14 +19,7 @@ const supabase = createClient(
 const app = express();
 
 // CORS for dev: allow Expo/React Native and local frontend
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://127.0.0.1:8081',
-    'http://localhost:8081'
-  ],
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
 
 // Multer for file uploads (in-memory)
@@ -101,6 +94,13 @@ app.post('/auth/request', async (req, res) => {
     console.error('Erreur sendOtp:', err);
     res.status(500).json({ error: 'Échec envoi code' });
   }
+});
+
+// Route: logout
+app.post('/auth/logout', (req, res) => {
+  // For JWT, logout is handled client-side by deleting the token.
+  // Optionally, we could blacklist the token here if we implement server-side invalidation.
+  res.json({ success: true });
 });
 
 // Route: vérifier OTP et émettre JWT

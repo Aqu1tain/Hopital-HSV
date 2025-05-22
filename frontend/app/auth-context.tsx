@@ -42,3 +42,6 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 }
+
+// Add a default export to satisfy Expo Router warning
+export default {};

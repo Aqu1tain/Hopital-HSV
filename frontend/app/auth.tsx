@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { useRouter } from 'expo-router';
 import { useAuth } from './auth-context';
 
-const BACKEND_URL = 'http://localhost:3000'; // Change if needed
+const BACKEND_URL = 'http://192.168.235.59:3000'; // Change if needed
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
@@ -101,54 +102,90 @@ export default function AuthScreen() {
 
 
   return (
-    <View style={styles.container}>
-      <Image source={require('@/assets/images/logo.png')} style={styles.logoImage} resizeMode="contain" />
-      {step === 'email' && (
-        <>
-          <Text style={styles.label}>Adresse E-Mail</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. gaston.lagaffe@mail.com"
-            placeholderTextColor="#C0C0C0"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TouchableOpacity style={styles.button} onPress={handleRequestCode} disabled={loading || !email}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Recevoir un code</Text>}
-          </TouchableOpacity>
-        </>
-      )}
-      {step === 'code' && (
-        <>
-          <Text style={styles.label}>Code reçu par email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Code à 6 chiffres"
-            placeholderTextColor="#C0C0C0"
-            value={code}
-            onChangeText={setCode}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-          <TouchableOpacity style={styles.button} onPress={handleVerifyCode} disabled={loading || code.length !== 6}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Vérifier</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: cooldown > 0 ? '#B0B0B0' : '#3451db' }]}
-            onPress={handleResendCode}
-            disabled={cooldown > 0 || loading}
-          >
-            <Text style={styles.buttonText}>
-              {cooldown > 0 ? `Renvoyer le code (${cooldown}s)` : 'Renvoyer le code'}
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {success ? <Text style={styles.success}>{success}</Text> : null}
-    </View>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+    >
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.container}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Image
+          source={require('@/assets/images/logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
+        {step === 'email' && (
+          <>
+            <Text style={styles.label}>Adresse E-Mail</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. gaston.lagaffe@mail.com"
+              placeholderTextColor="#C0C0C0"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleRequestCode}
+              disabled={loading || !email}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Recevoir un code</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
+        {step === 'code' && (
+          <>
+            <Text style={styles.label}>Code reçu par email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Code à 6 chiffres"
+              placeholderTextColor="#C0C0C0"
+              value={code}
+              onChangeText={setCode}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleVerifyCode}
+              disabled={loading || code.length !== 6}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Vérifier</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                { backgroundColor: cooldown > 0 ? '#B0B0B0' : '#3451db' },
+              ]}
+              onPress={handleResendCode}
+              disabled={cooldown > 0 || loading}
+            >
+              <Text style={styles.buttonText}>
+                {cooldown > 0
+                  ? `Renvoyer le code (${cooldown}s)`
+                  : 'Renvoyer le code'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {success ? <Text style={styles.success}>{success}</Text> : null}
+      </KeyboardAwareScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
