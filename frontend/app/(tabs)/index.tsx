@@ -1,8 +1,17 @@
 import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import AppHeader from '../../components/AppHeader';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import LandingScreen from './LandingScreen';
+import { useCallback, useEffect, useState } from 'react';
+import Entypo from '@expo/vector-icons/Entypo';
+import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
+
+
+SplashScreen.preventAutoHideAsync();
+
+SplashScreen.setOptions({
+  duration: 1000,
+  fade: true,
+});
 
 type Props = {
   title: string;
@@ -18,7 +27,24 @@ const RDVButton: React.FC<Props> = ({title,onPress}) => {
   );
 };
 
-export default function HomeScreen() {
+export default function splashScreen(){
+  const [appIsReady, setAppIsReady] = useState(false);
+
+  useEffect(() => {
+    try{
+      await Font.loadAsync(Entypo.font);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      setAppIsReady(true);
+    }
+  }
+
+  prepare();
+},[]
+
+export function HomeScreen() {  
   return (
     <View style={styles.screen}>
       <AppHeader />
@@ -111,3 +137,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
 });
+
+
