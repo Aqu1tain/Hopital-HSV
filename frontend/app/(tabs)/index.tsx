@@ -1,5 +1,8 @@
 import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import AppHeader from '../../components/AppHeader';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import LandingScreen from './LandingScreen';
 
 type Props = {
   title: string;
