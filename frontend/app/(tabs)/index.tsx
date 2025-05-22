@@ -124,13 +124,14 @@ export default function HomeScreen() {
               style={styles.gradientOverlay}
               pointerEvents="none"
             />
-                      <TouchableOpacity
-            onPress={() => router.replace('/practitioners')}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>Voir plus</Text>
-          </TouchableOpacity>
-
+            <View style={styles.overlayContent}>
+              <TouchableOpacity
+                onPress={() => router.replace('/practitioners')}
+                style={styles.overlayButton}
+              >
+                <Text style={styles.buttonText}>Voire plus</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -147,13 +148,30 @@ const styles = StyleSheet.create({
     position: 'relative',
     marginTop: 10,
   },
+  overlayContent: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    transform: [{ translateX: -0.5 * 94 }],
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 4, 
+  },
+
+  overlayButton: {
+    backgroundColor: '#2E4FD1E5',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    zIndex: 5,
+  },
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 60, // Ajuste selon ton besoin
-    zIndex: 2,
+    zIndex: 1,
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
   },
