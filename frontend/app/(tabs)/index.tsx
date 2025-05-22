@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
+import { Image, ScrollView, View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
 import AppHeader from '../../components/AppHeader';
 
 type RDVBtn = {
@@ -11,6 +11,18 @@ type Card = {
   details: string;
   onPress: (event: GestureResponderEvent) => void;
 }
+
+type CardNoButton = {
+  doctorName: string;
+  details: string;
+}
+
+type DoctorCardProps = {
+  image: any; // peut être une URI ou require()
+  name: string;
+  specialty: string;
+  address: string;
+};
 
 const RDVButton: React.FC<RDVBtn> = ({title,onPress}) => {
   return (
@@ -30,20 +42,44 @@ const CardPrac: React.FC<Card> = ({ doctorName, details, onPress }) => {
           <Text style={styles.subtitle}>{details}</Text>
         </View>
         <TouchableOpacity style={styles.button} onPress={onPress}>
-          <Text style={styles.buttonText}>Programmer un rappel</Text>
+          <Text style={[styles.buttonText, {fontSize: 12}]}>Programmer un rappel</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
+const DoctorInfoCard: React.FC<DoctorCardProps> = ({ image, name, specialty, address }) => {
+  return (
+    <View style={styles.doctorCard}>
+      <Image source={image} style={styles.doctorImage} />
+      <View style={styles.doctorInfo}>
+        <Text style={styles.doctorName}>{name}</Text>
+        <Text style={styles.doctorSpecialty}>{specialty}</Text>
+        <Text style={styles.doctorAddress}>{address}</Text>
+      </View>
+    </View>
+  );
+};
+
+const CardPracNoButton: React.FC<CardNoButton> = ({ doctorName, details }) => {
+  return (
+    <View style={styles.card}>
+      <View style={styles.divCard}>
+        <Text style={styles.cardTitle}>{doctorName}</Text>
+        <Text style={styles.subtitle}>{details}</Text>
+      </View>
+    </View>
+  );
+};
 
 export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader />
-      <View style={styles.container}>
-        <Text style={[styles.typicalText, { lineHeight:50 }]}>Vous n’avez pas de rendez-vous prévu aujourd’hui.</Text>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.firstContainer}>
+        <Text style={[styles.typicalText, { lineHeight:50, paddingBottom: 7}]}>Vous n’avez pas de rendez-vous prévu aujourd’hui.</Text>
         <RDVButton
           title="Prendre un rendez vous"
           onPress={() => alert('Bouton appuyé')}
@@ -51,14 +87,29 @@ export default function HomeScreen() {
       </View>
       <View style={[styles.header, { flexDirection: 'column' }]}>
         <Text style={[styles.typicalText, {alignSelf: 'flex-start'}]}>Vos prochains rendez-vous</Text>
-        <View style={[styles.container, { display: 'flex'}]}>
           <CardPrac
           doctorName="Dr. Rozières - Généraliste"
           details="Demain 9h - rue boissonade"
           onPress={() => alert('Bouton appuyé')}
           />
-        </View>
+        <Text style={[styles.typicalText, {alignSelf: 'flex-start', marginTop:30}]}>Vos derniers rendez-vous</Text>
+        <CardPracNoButton
+          doctorName="Martin Lanson - Ostéopathe"
+          details="Lundi"
+        />
+        <CardPracNoButton
+          doctorName="Dr. Martinez - Cardiologue"
+          details="Il y a 2 semaines"
+        />
+        <Text style={[styles.typicalText, {alignSelf: 'flex-start', marginTop: 30}]}>Praticiens disponibles aujourd'hui</Text>
+        <DoctorInfoCard
+          image={require('../../assets/images/elise.png')} 
+          name="Dr. Elise Renard"
+          specialty="Dermatologue"
+          address="32 rue de la Santé, Paris"
+        />
       </View>
+      </ScrollView>
     </View>
   );
 }
@@ -75,14 +126,20 @@ const styles = StyleSheet.create({
     fontWeight: 500,
     fontStyle: 'normal',
   },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
   cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 10, 
+    paddingVertical: 8,
   },
   cardTitle: {
     color: 'black',
-    fontSize: 10, 
+    fontSize: 15, 
     fontWeight: '700',
     fontFamily: 'Inter',
     textAlign: 'left',
@@ -133,9 +190,12 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   container: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+  },
+  firstContainer: {
+    alignItems: 'center',
+    marginTop: 98,
+    marginBottom: 98,
   },
   title: {
     fontSize: 24,
@@ -151,13 +211,17 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   card: {
+    height: 59,
+    alignSelf: 'stretch',
+    marginBottom: 17,
+    padding: 16,
     borderRadius: 10,
     backgroundColor: '#FFF',
     shadowColor: '#000',
     shadowOffset: { width: 4, height: 5 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4,   
+    elevation: 4,  
   },
   subtitle: {
     color: 'black',
@@ -165,5 +229,51 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontWeight: '400',
     textAlign: 'center',
+  },
+  doctorCard: {
+    width: 424,
+    paddingHorizontal: 15,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  
+  doctorImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  
+  doctorInfo: {
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  doctorName: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+    color: '#000',
+  },
+  
+  doctorSpecialty: {
+    fontSize: 13,
+    fontWeight: '500',
+    fontFamily: 'Inter',
+    color: '#444',
+  },
+  
+  doctorAddress: {
+    fontSize: 10,
+    fontWeight: '400',
+    fontFamily: 'Inter',
+    color: '#777',
   },
 });
