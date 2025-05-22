@@ -103,43 +103,84 @@ app.post('/auth/logout', (req, res) => {
   res.json({ success: true });
 });
 
-// Route: vérifier OTP et émettre JWT
+// Route: vérifier OTP et émettre JWT ou lancer signup
 app.post('/auth/verify', async (req, res) => {
   const { email, code } = req.body;
-  if (!email || !code) return res.status(400).json({ error: 'Email et code requis' });
+  if (!email || !code) 
+    return res.status(400).json({ error: 'Email et code requis' });
 
+  // 1) Vérifier OTP
   const { data, error } = await supabase
     .from('login_codes')
     .select('*')
     .eq('email', email)
     .single();
 
-  if (error || !data) return res.status(400).json({ error: 'Code invalide' });
-  if (new Date(data.expires_at) < new Date()) return res.status(400).json({ error: 'Code expiré' });
+  if (error || !data) 
+    return res.status(400).json({ error: 'Code invalide' });
+  if (new Date(data.expires_at) < new Date()) 
+    return res.status(400).json({ error: 'Code expiré' });
 
   const hash = crypto.createHash('sha256').update(code).digest('hex');
-  if (hash !== data.code_hash) return res.status(400).json({ error: 'Code invalide' });
+  if (hash !== data.code_hash) 
+    return res.status(400).json({ error: 'Code invalide' });
 
-  // Supprimer le code utilisé
+  // Supprimer le code OTP utilisé
   await supabase.from('login_codes').delete().eq('email', email);
 
-  // Trouver l'utilisateur
+  // 2) Tenter de récupérer l'utilisateur
   const { data: user, error: usrErr } = await supabase
     .from('users')
     .select('*')
     .eq('email', email)
     .single();
-  if (usrErr || !user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
 
-  // Émettre JWT
+  // Si pas d'utilisateur → frontend doit lancer le flow "signup patient"
+  if (usrErr || !user) {
+    return res.json({ newUser: true, email });
+  }
+
+  // 3) Si existant, on émet le JWT
   const token = jwt.sign(
     { sub: user.id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: '8h' }
   );
 
-  res.json({ token });
+  return res.json({ token });
 });
+
+// Route: inscription patient (création de compte + JWT renvoyé)
+app.post('/signup/patient', async (req, res) => {
+  const { email, phone, first_name, last_name, birth_date, gender } = req.body;
+  if (!email || !first_name || !last_name || !birth_date || !gender) {
+    return res.status(400).json({ error: 'Champs requis manquants' });
+  }
+
+  // 1) Créer le user
+  const { data: user, error: uErr } = await supabase
+    .from('users')
+    .insert([{ email, phone, first_name, last_name, role: 'patient' }])
+    .select()
+    .single();
+  if (uErr) return res.status(400).json({ error: uErr.message });
+
+  // 2) Créer le profil patient
+  const { error: pErr } = await supabase
+    .from('patients')
+    .insert([{ user_id: user.id, birth_date, gender }]);
+  if (pErr) return res.status(400).json({ error: pErr.message });
+
+  // 3) Émettre le JWT immédiatement
+  const token = jwt.sign(
+    { sub: user.id, role: 'patient' },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+
+  return res.json({ token, user: { id: user.id, role: 'patient' } });
+});
+
 
 // Middleware d'authentification
 function authMiddleware(req, res, next) {
