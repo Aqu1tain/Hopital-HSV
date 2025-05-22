@@ -5,7 +5,6 @@ import Entypo from '@expo/vector-icons/Entypo';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
 
-
 SplashScreen.preventAutoHideAsync();
 
 SplashScreen.setOptions({
@@ -18,33 +17,44 @@ type Props = {
   onPress: (event: GestureResponderEvent) => void;
 };
 
-const RDVButton: React.FC<Props> = ({title,onPress}) => {
+const RDVButton: React.FC<Props> = ({ title, onPress }) => {
   return (
     <TouchableOpacity style={styles.button} onPress={onPress}>
       <Text style={styles.buttonText}>{title}</Text>
     </TouchableOpacity>
-      
   );
 };
 
-export default function splashScreen(){
+function SplashScreenComponent() {
+  return (
+    <View style={styles.splashScreen}>
+      <Text style={styles.splashText}>HSV</Text>
+    </View>
+  );
+}
+
+function splashScreen() {
   const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
-    try{
-      await Font.loadAsync(Entypo.font);
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      Font.loadAsync(Entypo.font);
+      setTimeout(() => {
+        setAppIsReady(true);
+      }, 2000);
     } catch (e) {
       console.warn(e);
-    } finally {
-      setAppIsReady(true);
     }
+  }, []);
+
+  if (!appIsReady) {
+    return <SplashScreenComponent />;
   }
 
-  prepare();
-},[]
+  return <HomeScreen />;
+}
 
-export function HomeScreen() {  
+function HomeScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader />
@@ -54,7 +64,7 @@ export function HomeScreen() {
           title="Prendre un rendez vous"
           onPress={() => alert('Bouton appuyé')}
         />
-      <Text style={styles.title}>Bienvenue dans votre nouvelle app !</Text>
+        <Text style={styles.title}>Bienvenue dans votre nouvelle app !</Text>
       </View>
     </View>
   );
@@ -92,10 +102,10 @@ const styles = StyleSheet.create({
     color: '#FFF',
     textAlign: 'right',
     fontFamily: 'Inter',
-    fontSize: 15, 
+    fontSize: 15,
     fontStyle: 'normal',
     fontWeight: '700',
-    lineHeight: undefined, 
+    lineHeight: undefined,
   },
   header: {
     flexDirection: 'row',
@@ -136,6 +146,18 @@ const styles = StyleSheet.create({
     color: '#222',
     fontFamily: 'Inter',
   },
+  splashScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  splashText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#222',
+    fontFamily: 'Inter',
+  },
 });
 
-
+export default splashScreen;
