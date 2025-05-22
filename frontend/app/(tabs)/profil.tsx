@@ -1,13 +1,46 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import AppHeader from '../../components/AppHeader';
 
+import { useAuth } from '../auth-context';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+
 export default function ProfilScreen() {
+  const { logout } = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await fetch('http://localhost:3000/auth/logout', { method: 'POST' });
+    } catch {}
+    logout();
+    router.replace('/auth');
+    setLoading(false);
+  };
+
   return (
     <View style={{flex: 1, backgroundColor: '#fff'}}>
       <AppHeader />
       <View style={styles.container}>
         <Text style={styles.title}>Profil</Text>
         <Text style={styles.subtitle}>Bienvenue sur votre espace personnel !</Text>
+        <TouchableOpacity
+          style={{
+            marginTop: 32,
+            backgroundColor: '#e74c3c',
+            paddingVertical: 12,
+            paddingHorizontal: 32,
+            borderRadius: 8,
+          }}
+          onPress={handleLogout}
+          disabled={loading}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>
+            {loading ? 'Déconnexion...' : 'Se déconnecter'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
