@@ -181,6 +181,88 @@ app.post('/signup/patient', async (req, res) => {
   return res.json({ token, user: { id: user.id, role: 'patient' } });
 });
 
+app.post(
+  '/signup/practitioner',
+  upload.single('proof'),
+  async (req, res) => {
+    const {
+      email, phone, first_name, last_name, title,
+      street_address, postal_code, city, floor, building_code,
+      public_transport_access,
+      payment_card, payment_bank_transfer,
+      payment_cheque, payment_cash,
+      accepts_mutuelle, conventioned,
+      standard_price_cents, secu_coverage_percent,
+    } = req.body;
+
+    if (!email || !first_name || !last_name || !req.file) {
+      return res
+        .status(400)
+        .json({ error: 'email, prénom, nom et preuve sont obligatoires' });
+    }
+
+    try {
+      // 1) Create user record
+      const { data: user, error: uErr } = await supabase
+        .from('users')
+        .insert([
+          { email, phone, first_name, last_name, role: 'practitioner' }
+        ])
+        .select('id')
+        .single();
+      if (uErr) throw uErr;
+
+      // 2) Upload proof file to Storage
+      const path = `practitioners/${user.id}/${req.file.originalname}`;
+      const { error: upErr } = await supabase.storage
+        .from('proofs')
+        .upload(path, req.file.buffer, {
+          contentType: req.file.mimetype,
+        });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage
+        .from('proofs')
+        .getPublicUrl(path);
+
+      // 3) Insert practitioner profile, unverified
+      const { error: pErr } = await supabase
+        .from('practitioners')
+        .insert([
+          {
+            user_id: user.id,
+            title,
+            street_address,
+            postal_code,
+            city,
+            floor,
+            building_code,
+            public_transport_access,
+            payment_card: payment_card === 'true',
+            payment_bank_transfer: payment_bank_transfer === 'true',
+            payment_cheque: payment_cheque === 'true',
+            payment_cash: payment_cash === 'true',
+            accepts_mutuelle: accepts_mutuelle === 'true',
+            conventioned: conventioned === 'true',
+            standard_price_cents: Number(standard_price_cents),
+            secu_coverage_percent: Number(secu_coverage_percent),
+            verification_documents: [urlData.publicUrl],
+            is_verified: false,
+          },
+        ]);
+      if (pErr) throw pErr;
+
+      return res.json({
+        message:
+          "Inscription praticien reçue ! Votre dossier est en attente de validation.",
+      });
+    } catch (err) {
+      console.error('Signup practitioner error:', err);
+      return res.status(500).json({
+        error: err.message || 'Erreur interne lors de l’inscription',
+      });
+    }
+  }
+);
 
 // Middleware d'authentification
 function authMiddleware(req, res, next) {
@@ -248,6 +330,16 @@ app.post(
     if (upErr) return res.status(500).json({ error: upErr.message });
     const url = supabase.storage.from('proofs').getPublicUrl(path).data.publicUrl;
 
+    // Insérer la preuve dans la table proofs
+    const { error: proofErr } = await supabase
+      .from('proofs')
+      .insert([{
+        practitioner_id: userId,
+        url,
+        filename: req.file.originalname,
+      }]);
+    if (proofErr) return res.status(500).json({ error: proofErr.message });
+
     // Insérer praticien non vérifié
     const { error: prErr } = await supabase
       .from('practitioners')
@@ -268,7 +360,6 @@ app.post(
         conventioned: conventioned === 'true',
         standard_price_cents: Number(standard_price_cents),
         secu_coverage_percent: Number(secu_coverage_percent),
-        verification_documents: [url],
         is_verified: false
       }]);
     if (prErr) return res.status(400).json({ error: prErr.message });

@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import { useAuth } from './auth-context';
 
 const BACKEND_URL = 'http://192.168.235.59:3000'; // Change if needed
 
 type Step = 'email' | 'code' | 'signup';
+type MainStep = Step | 'practitioner';
 
 export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<Step>('email');
+  const [mainStep, setMainStep] = useState<MainStep>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -200,7 +202,7 @@ export default function AuthScreen() {
           style={styles.logoImage}
           resizeMode="contain"
         />
-        {step === 'email' && (
+        {mainStep === 'email' && step === 'email' && (
           <>
             <Text style={styles.label}>Adresse E-Mail</Text>
             <TextInput
@@ -222,6 +224,11 @@ export default function AuthScreen() {
               ) : (
                 <Text style={styles.buttonText}>Recevoir un code</Text>
               )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.practitionerLink}>
+              <Link href="/practitioner-signup">
+                <Text style={styles.practitionerLinkText}>S’inscrire comme Praticien</Text>
+              </Link>
             </TouchableOpacity>
           </>
         )}
@@ -394,6 +401,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 60,
+  },
+  practitionerLink: {
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  practitionerLinkText: {
+    color: '#aaa',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+    fontWeight: '500',
   },
   inputError: {
     borderColor: '#e74c3c',
