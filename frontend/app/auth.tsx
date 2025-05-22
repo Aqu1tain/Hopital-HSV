@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from './auth-context';
 
 const BACKEND_URL = 'http://localhost:3000'; // Change if needed
 
@@ -10,6 +12,22 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const { setToken, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      router.replace('/');
+    }
+  }, [isAuthenticated]);
+
+  React.useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleRequestCode = async () => {
     setLoading(true);
@@ -25,12 +43,35 @@ export default function AuthScreen() {
       if (!res.ok) throw new Error(data.error || 'Erreur envoi code');
       setStep('code');
       setSuccess('Code envoyé par email.');
+      setCooldown(20);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const handleResendCode = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await fetch(`${BACKEND_URL}/auth/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur envoi code');
+      setSuccess('Code renvoyé par email.');
+      setCooldown(20);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleVerifyCode = async () => {
     setLoading(true);
@@ -44,15 +85,20 @@ export default function AuthScreen() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Code invalide');
-      // You may want to store a token here (data.token?)
-      setSuccess('Connexion réussie !');
-      // TODO: Redirect or update auth state
+      if (data.token) {
+        setToken(data.token);
+        setSuccess('Connexion réussie !');
+        router.replace('/');
+      } else {
+        setError("Aucun token reçu.");
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <View style={styles.container}>
@@ -88,6 +134,15 @@ export default function AuthScreen() {
           />
           <TouchableOpacity style={styles.button} onPress={handleVerifyCode} disabled={loading || code.length !== 6}>
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Vérifier</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: cooldown > 0 ? '#B0B0B0' : '#3451db' }]}
+            onPress={handleResendCode}
+            disabled={cooldown > 0 || loading}
+          >
+            <Text style={styles.buttonText}>
+              {cooldown > 0 ? `Renvoyer le code (${cooldown}s)` : 'Renvoyer le code'}
+            </Text>
           </TouchableOpacity>
         </>
       )}

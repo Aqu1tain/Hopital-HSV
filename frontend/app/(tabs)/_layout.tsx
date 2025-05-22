@@ -2,7 +2,20 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Calendar, Hospital, User } from 'lucide-react-native';
 
+import { useAuth } from '../auth-context';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
+
 export default function TabLayout() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/auth');
+    }
+  }, [isAuthenticated]);
+
   return (
     <Tabs
       screenOptions={{
