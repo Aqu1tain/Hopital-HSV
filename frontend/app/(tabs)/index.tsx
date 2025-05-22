@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
+import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent, Image } from 'react-native';
 import AppHeader from '../../components/AppHeader';
 import { useCallback, useEffect, useState } from 'react';
 import Entypo from '@expo/vector-icons/Entypo';
@@ -25,33 +25,12 @@ const RDVButton: React.FC<Props> = ({ title, onPress }) => {
   );
 };
 
-function SplashScreenComponent() {
+function SplashScreenComponent(props) {
   return (
     <View style={styles.splashScreen}>
-      <Text style={styles.splashText}>HSV</Text>
+      <Image style={styles.image} source={require('../../assets/images/logo.png')}/>
     </View>
   );
-}
-
-function splashScreen() {
-  const [appIsReady, setAppIsReady] = useState(false);
-
-  useEffect(() => {
-    try {
-      Font.loadAsync(Entypo.font);
-      setTimeout(() => {
-        setAppIsReady(true);
-      }, 2000);
-    } catch (e) {
-      console.warn(e);
-    }
-  }, []);
-
-  if (!appIsReady) {
-    return <SplashScreenComponent />;
-  }
-
-  return <HomeScreen />;
 }
 
 function HomeScreen() {
@@ -158,6 +137,10 @@ const styles = StyleSheet.create({
     color: '#222',
     fontFamily: 'Inter',
   },
+  image: {
+    width: 100,
+    height: 100,
+  },
 });
 
-export default splashScreen;
+export default HomeScreen;
