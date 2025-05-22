@@ -9,6 +9,7 @@ type RDVBtn = {
 type Card = {
   doctorName: string;
   details: string;
+  onPress: (event: GestureResponderEvent) => void;
 }
 
 const RDVButton: React.FC<RDVBtn> = ({title,onPress}) => {
@@ -20,11 +21,22 @@ const RDVButton: React.FC<RDVBtn> = ({title,onPress}) => {
   );
 };
 
-const CardPrac: React.FC<Card> = ({doctorName,details}) => {
+const CardPrac: React.FC<Card> = ({ doctorName, details, onPress }) => {
   return (
-    //<View
-  )
-}
+    <View style={styles.card}>
+      <View style={styles.cardRow}>
+        <View style={styles.divCard}>
+          <Text style={styles.cardTitle}>{doctorName}</Text>
+          <Text style={styles.subtitle}>{details}</Text>
+        </View>
+        <TouchableOpacity style={styles.button} onPress={onPress}>
+          <Text style={styles.buttonText}>Programmer un rappel</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
 
 export default function HomeScreen() {
   return (
@@ -37,10 +49,14 @@ export default function HomeScreen() {
           onPress={() => alert('Bouton appuyé')}
         />
       </View>
-      <View style={styles.header}>
-        <Text style={styles.typicalText}>Vos prochains rendez-vous</Text>
-        <View style={styles.header}>
-
+      <View style={[styles.header, { flexDirection: 'column' }]}>
+        <Text style={[styles.typicalText, {alignSelf: 'flex-start'}]}>Vos prochains rendez-vous</Text>
+        <View style={[styles.container, { display: 'flex'}]}>
+          <CardPrac
+          doctorName="Dr. Rozières - Généraliste"
+          details="Demain 9h - rue boissonade"
+          onPress={() => alert('Bouton appuyé')}
+          />
         </View>
       </View>
     </View>
@@ -59,18 +75,25 @@ const styles = StyleSheet.create({
     fontWeight: 500,
     fontStyle: 'normal',
   },
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTitle: {
+    color: 'black',
+    fontSize: 10, 
+    fontWeight: '700',
+    fontFamily: 'Inter',
+    textAlign: 'left',
+  },
   button: {
-    width: '60%',
-    paddingLeft: 20,
-    paddingRight: 20,
-    paddingTop: 15,
-    paddingBottom: 15,
-    opacity: 0.9,
+    marginLeft: 20, // espace entre le texte et le bouton
+    paddingVertical: 9,
+    paddingHorizontal: 11,
     borderRadius: 10,
-    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
     backgroundColor: '#2E4FD1E5',
   },
   buttonText: {
@@ -119,5 +142,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#222',
     fontFamily: 'Inter',
+  },
+  divCard: {
+    flex: 1, // occupe tout l’espace dispo à gauche
+    paddingRight: 10,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    alignSelf: 'stretch',
+  },
+  card: {
+    borderRadius: 10,
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 4, height: 5 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,   
+  },
+  subtitle: {
+    color: 'black',
+    fontSize: 8,
+    fontFamily: 'Inter',
+    fontWeight: '400',
+    textAlign: 'center',
   },
 });
