@@ -1,16 +1,7 @@
 import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import AppHeader from '../../components/AppHeader';
-import { useCallback, useEffect, useState } from 'react';
-import Entypo from '@expo/vector-icons/Entypo';
-import * as SplashScreen from 'expo-splash-screen';
-import * as Font from 'expo-font';
-
-SplashScreen.preventAutoHideAsync();
-
-SplashScreen.setOptions({
-  duration: 1000,
-  fade: true,
-});
+import Splash from '../Splash';
 
 type Props = {
   title: string;
@@ -28,7 +19,15 @@ const RDVButton: React.FC<Props> = ({ title, onPress }) => {
 
 
 function HomeScreen() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+  }, []);
   return (
+    
     <View style={styles.screen}>
       <AppHeader />
       <View style={styles.container}>

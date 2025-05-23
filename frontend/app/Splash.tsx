@@ -8,7 +8,7 @@ function Splash() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("./frontend/app/(tabs)/index.tsx"); // Redirige vers la page index (tabs)
+      router.replace("/"); // Redirige vers la page index (tabs)
     }, 2000); // 2 secondes, à adapter
 
     return () => clearTimeout(timer);
