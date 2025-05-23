@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
@@ -16,6 +17,9 @@ const supabase = createClient(
 
 // Express setup
 const app = express();
+
+// CORS for dev: allow Expo/React Native and local frontend
+app.use(cors());
 app.use(express.json());
 
 // Multer for file uploads (in-memory)
@@ -65,6 +69,7 @@ async function sendOtp(email) {
 
   // Envoyer l'email
   try {
+    console.log('About to send mail to', email);
     await transporter.sendMail({
       from: process.env.EMAIL_FROM,
       to: email,
@@ -91,43 +96,173 @@ app.post('/auth/request', async (req, res) => {
   }
 });
 
-// Route: vérifier OTP et émettre JWT
+// Route: logout
+app.post('/auth/logout', (req, res) => {
+  // For JWT, logout is handled client-side by deleting the token.
+  // Optionally, we could blacklist the token here if we implement server-side invalidation.
+  res.json({ success: true });
+});
+
+// Route: vérifier OTP et émettre JWT ou lancer signup
 app.post('/auth/verify', async (req, res) => {
   const { email, code } = req.body;
-  if (!email || !code) return res.status(400).json({ error: 'Email et code requis' });
+  if (!email || !code) 
+    return res.status(400).json({ error: 'Email et code requis' });
 
+  // 1) Vérifier OTP
   const { data, error } = await supabase
     .from('login_codes')
     .select('*')
     .eq('email', email)
     .single();
 
-  if (error || !data) return res.status(400).json({ error: 'Code invalide' });
-  if (new Date(data.expires_at) < new Date()) return res.status(400).json({ error: 'Code expiré' });
+  if (error || !data) 
+    return res.status(400).json({ error: 'Code invalide' });
+  if (new Date(data.expires_at) < new Date()) 
+    return res.status(400).json({ error: 'Code expiré' });
 
   const hash = crypto.createHash('sha256').update(code).digest('hex');
-  if (hash !== data.code_hash) return res.status(400).json({ error: 'Code invalide' });
+  if (hash !== data.code_hash) 
+    return res.status(400).json({ error: 'Code invalide' });
 
-  // Supprimer le code utilisé
+  // Supprimer le code OTP utilisé
   await supabase.from('login_codes').delete().eq('email', email);
 
-  // Trouver l'utilisateur
+  // 2) Tenter de récupérer l'utilisateur
   const { data: user, error: usrErr } = await supabase
     .from('users')
     .select('*')
     .eq('email', email)
     .single();
-  if (usrErr || !user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
 
-  // Émettre JWT
+  // Si pas d'utilisateur → frontend doit lancer le flow "signup patient"
+  if (usrErr || !user) {
+    return res.json({ newUser: true, email });
+  }
+
+  // 3) Si existant, on émet le JWT
   const token = jwt.sign(
     { sub: user.id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: '8h' }
   );
 
-  res.json({ token });
+  return res.json({ token });
 });
+
+// Route: inscription patient (création de compte + JWT renvoyé)
+app.post('/signup/patient', async (req, res) => {
+  const { email, phone, first_name, last_name, birth_date, gender } = req.body;
+  if (!email || !first_name || !last_name || !birth_date || !gender) {
+    return res.status(400).json({ error: 'Champs requis manquants' });
+  }
+
+  // 1) Créer le user
+  const { data: user, error: uErr } = await supabase
+    .from('users')
+    .insert([{ email, phone, first_name, last_name, role: 'patient' }])
+    .select()
+    .single();
+  if (uErr) return res.status(400).json({ error: uErr.message });
+
+  // 2) Créer le profil patient
+  const { error: pErr } = await supabase
+    .from('patients')
+    .insert([{ user_id: user.id, birth_date, gender }]);
+  if (pErr) return res.status(400).json({ error: pErr.message });
+
+  // 3) Émettre le JWT immédiatement
+  const token = jwt.sign(
+    { sub: user.id, role: 'patient' },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+
+  return res.json({ token, user: { id: user.id, role: 'patient' } });
+});
+
+app.post(
+  '/signup/practitioner',
+  upload.single('proof'),
+  async (req, res) => {
+    const {
+      email, phone, first_name, last_name, title,
+      street_address, postal_code, city, floor, building_code,
+      public_transport_access,
+      payment_card, payment_bank_transfer,
+      payment_cheque, payment_cash,
+      accepts_mutuelle, conventioned,
+      standard_price_cents, secu_coverage_percent,
+    } = req.body;
+
+    if (!email || !first_name || !last_name || !req.file) {
+      return res
+        .status(400)
+        .json({ error: 'email, prénom, nom et preuve sont obligatoires' });
+    }
+
+    try {
+      // 1) Create user record
+      const { data: user, error: uErr } = await supabase
+        .from('users')
+        .insert([
+          { email, phone, first_name, last_name, role: 'practitioner' }
+        ])
+        .select('id')
+        .single();
+      if (uErr) throw uErr;
+
+      // 2) Upload proof file to Storage
+      const path = `practitioners/${user.id}/${req.file.originalname}`;
+      const { error: upErr } = await supabase.storage
+        .from('proofs')
+        .upload(path, req.file.buffer, {
+          contentType: req.file.mimetype,
+        });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage
+        .from('proofs')
+        .getPublicUrl(path);
+
+      // 3) Insert practitioner profile, unverified
+      const { error: pErr } = await supabase
+        .from('practitioners')
+        .insert([
+          {
+            user_id: user.id,
+            title,
+            street_address,
+            postal_code,
+            city,
+            floor,
+            building_code,
+            public_transport_access,
+            payment_card: payment_card === 'true',
+            payment_bank_transfer: payment_bank_transfer === 'true',
+            payment_cheque: payment_cheque === 'true',
+            payment_cash: payment_cash === 'true',
+            accepts_mutuelle: accepts_mutuelle === 'true',
+            conventioned: conventioned === 'true',
+            standard_price_cents: Number(standard_price_cents),
+            secu_coverage_percent: Number(secu_coverage_percent),
+            verification_documents: [urlData.publicUrl],
+            is_verified: false,
+          },
+        ]);
+      if (pErr) throw pErr;
+
+      return res.json({
+        message:
+          "Inscription praticien reçue ! Votre dossier est en attente de validation.",
+      });
+    } catch (err) {
+      console.error('Signup practitioner error:', err);
+      return res.status(500).json({
+        error: err.message || 'Erreur interne lors de l’inscription',
+      });
+    }
+  }
+);
 
 // Middleware d'authentification
 function authMiddleware(req, res, next) {
@@ -195,6 +330,16 @@ app.post(
     if (upErr) return res.status(500).json({ error: upErr.message });
     const url = supabase.storage.from('proofs').getPublicUrl(path).data.publicUrl;
 
+    // Insérer la preuve dans la table proofs
+    const { error: proofErr } = await supabase
+      .from('proofs')
+      .insert([{
+        practitioner_id: userId,
+        url,
+        filename: req.file.originalname,
+      }]);
+    if (proofErr) return res.status(500).json({ error: proofErr.message });
+
     // Insérer praticien non vérifié
     const { error: prErr } = await supabase
       .from('practitioners')
@@ -215,7 +360,6 @@ app.post(
         conventioned: conventioned === 'true',
         standard_price_cents: Number(standard_price_cents),
         secu_coverage_percent: Number(secu_coverage_percent),
-        verification_documents: [url],
         is_verified: false
       }]);
     if (prErr) return res.status(400).json({ error: prErr.message });
