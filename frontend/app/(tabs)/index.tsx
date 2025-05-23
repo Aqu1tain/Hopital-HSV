@@ -1,137 +1,115 @@
-import { Image, ScrollView, View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  StyleSheet
+} from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
 import AppHeader from '../../components/AppHeader';
 
-type RDVBtn = {
-  title: string;
-  onPress: (event: GestureResponderEvent) => void;
-};
-
-type Card = {
-  doctorName: string;
-  details: string;
-  onPress: (event: GestureResponderEvent) => void;
-}
-
-type CardNoButton = {
-  doctorName: string;
-  details: string;
-}
-
-type DoctorCardProps = {
-  image: any; // peut être une URI ou require()
-  name: string;
-  specialty: string;
-  address: string;
-};
-
-const RDVButton: React.FC<RDVBtn> = ({ title, onPress }) => {
-  return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
-      <Text style={styles.buttonText}>{title}</Text>
-    </TouchableOpacity>
-
-  );
-};
-
-const CardPrac: React.FC<Card> = ({ doctorName, details, onPress }) => {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardRow}>
-        <View style={styles.divCard}>
-          <Text style={styles.cardTitle}>{doctorName}</Text>
-          <Text style={styles.subtitle}>{details}</Text>
-        </View>
-        <TouchableOpacity style={styles.button} onPress={onPress}>
-          <Text style={[styles.buttonText, { fontSize: 12 }]}>Programmer un rappel</Text>
-        </TouchableOpacity>
-      </View>
+const Card = ({ title, details, actionText, onAction }) => (
+  <View style={styles.card}>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.cardDetails}>{details}</Text>
     </View>
-  );
-};
-
-const DoctorInfoCard: React.FC<DoctorCardProps> = ({ image, name, specialty, address }) => {
-  return (
-    <View style={styles.doctorCard}>
-      <Image source={image} style={styles.doctorImage} />
-      <View style={styles.doctorInfo}>
-        <Text style={styles.doctorName}>{name}</Text>
-        <Text style={styles.doctorSpecialty}>{specialty}</Text>
-        <Text style={styles.doctorAddress}>{address}</Text>
-      </View>
-    </View>
-  );
-};
-
-const CardPracNoButton: React.FC<CardNoButton> = ({ doctorName, details }) => {
-  return (
-    <View style={styles.card}>
-      <View style={styles.divCard}>
-        <Text style={styles.cardTitle}>{doctorName}</Text>
-        <Text style={styles.subtitle}>{details}</Text>
-      </View>
-    </View>
-  );
-};
+    {actionText && (
+      <TouchableOpacity style={styles.smallButton} onPress={onAction}>
+        <Text style={styles.smallButtonText}>{actionText}</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+);
 
 export default function HomeScreen() {
+  const nextAppts = [
+    { title: 'Dr. Rozières – Généraliste', details: 'Demain 9h – rue Boissonade' }
+  ];
+  const pastAppts = [
+    { title: 'Martin Lanson – Ostéopathe', details: 'Lundi' },
+    { title: 'Dr. Martinez – Cardiologue', details: 'Il y a 2 semaines' }
+  ];
+  const todayDocs = [
+    {
+      image: require('@/assets/images/elise.png'),
+      name: 'Dr. Rozières',
+      specialty: 'Médecin Généraliste',
+      address: '14 rue Boissonade, 75014 Paris'
+    },
+    {
+      image: require('@/assets/images/elise.png'),
+      name: 'Dr. Haussman',
+      specialty: 'Médecin Généraliste',
+      address: '14 rue Boissonade, 75014 Paris'
+    },
+  ];
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.container}>
       <AppHeader />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.firstContainer}>
-          <Text style={[styles.typicalText, { lineHeight: 50, paddingBottom: 7 }]}>Vous n’avez pas de rendez-vous prévu aujourd’hui.</Text>
-          <RDVButton
-            title="Prendre un rendez vous"
-            onPress={() => alert('Bouton appuyé')}
-          />
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.centered}>
+          <Text style={styles.notice}>
+            Vous n’avez pas de rendez-vous prévu aujourd’hui.
+          </Text>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => {}}
+          >
+            <Text style={styles.primaryButtonText}>
+              Prendre un rendez-vous
+            </Text>
+          </TouchableOpacity>
         </View>
-        <View style={[styles.header, { flexDirection: 'column' }]}>
-          <Text style={[styles.typicalText, { alignSelf: 'flex-start' }]}>Vos prochains rendez-vous</Text>
-          <CardPrac
-            doctorName="Dr. Rozières - Généraliste"
-            details="Demain 9h - rue boissonade"
-            onPress={() => alert('Bouton appuyé')}
+
+        <Text style={styles.sectionTitle}>Vos prochains rendez-vous</Text>
+        {nextAppts.map((r, i) => (
+          <Card
+            key={i}
+            title={r.title}
+            details={r.details}
+            actionText="Programmer un rappel"
+            onAction={() => {}}
           />
-          <Text style={[styles.typicalText, { alignSelf: 'flex-start', marginTop: 30 }]}>Vos derniers rendez-vous</Text>
-          <CardPracNoButton
-            doctorName="Martin Lanson - Ostéopathe"
-            details="Lundi"
-          />
-          <CardPracNoButton
-            doctorName="Dr. Martinez - Cardiologue"
-            details="Il y a 2 semaines"
-          />
-          <Text style={[styles.typicalText, { alignSelf: 'flex-start', marginTop: 30 }]}>Praticiens disponibles aujourd'hui</Text>
-          <View style={styles.blurContainer}>
-            <DoctorInfoCard
-              image={require('../../assets/images/elise.png')}
-              name="Dr. Elise Renard"
-              specialty="Dermatologue"
-              address="32 rue de la Santé, Paris"
-            />
-            <DoctorInfoCard
-              image={require('../../assets/images/elise.png')}
-              name="Dr. Jean Dupont"
-              specialty="Généraliste"
-              address="12 rue Lafayette, Paris"
-            />
-            <LinearGradient
-              colors={['transparent', 'rgba(255,255,255,0.9)', '#fff']}
-              style={styles.gradientOverlay}
-              pointerEvents="none"
-            />
-            <View style={styles.overlayContent}>
-              <TouchableOpacity
-                onPress={() => router.replace('/practitioners')}
-                style={styles.overlayButton}
-              >
-                <Text style={styles.buttonText}>Voire plus</Text>
-              </TouchableOpacity>
+        ))}
+
+        <Text style={styles.sectionTitle}>Vos derniers rendez-vous</Text>
+        {pastAppts.map((r, i) => (
+          <Card key={i} title={r.title} details={r.details} />
+        ))}
+
+        <Text style={styles.sectionTitle}>
+          Praticiens disponibles aujourd’hui
+        </Text>
+
+        <View style={styles.pracList}>
+          {todayDocs.map((d, i) => (
+            <View key={i} style={styles.doctorCard}>
+              <Image source={d.image} style={styles.doctorImage} />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={styles.cardTitle}>{d.name}</Text>
+                <Text style={styles.doctorSpecialty}>{d.specialty}</Text>
+                <Text style={styles.doctorAddress}>{d.address}</Text>
+              </View>
             </View>
+          ))}
+
+          {/* overlay gradient */}
+          <LinearGradient
+            colors={['transparent', '#ffffff']}
+            style={styles.gradientOverlay}
+          />
+          <View style={styles.overlayContent}>
+            <TouchableOpacity
+              onPress={() => router.replace('/practitioners')}
+              style={styles.primaryButton}
+            >
+              <Text style={styles.primaryButtonText}>Voir plus</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -140,196 +118,124 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  blurContainer: {
-    position: 'relative',
-    marginTop: 10,
-  },
-  overlayContent: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    transform: [{ translateX: -0.5 * 94 }],
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 4, 
+  container: { flex: 1, backgroundColor: '#fff' },
+  content: { padding: 20, paddingBottom: 40 },
+
+  centered: { alignItems: 'center', marginVertical: 40 },
+  notice: {
+    fontSize: 14,        // comme avant
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 22,
+    color: '#000',
   },
 
-  overlayButton: {
-    backgroundColor: '#2E4FD1E5',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  primaryButton: {
+    backgroundColor: '#2E4FD1',
     borderRadius: 10,
-    zIndex: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 14,        // comme avant
+    fontWeight: '700',
+  },
+
+  sectionTitle: {
+    fontSize: 16,        // comme avant
+    fontWeight: '500',
+    marginTop: 30,
+    marginBottom: 10,
+    color: '#000',
+  },
+
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 17,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardTitle: {
+    fontSize: 16,        // comme avant
+    fontWeight: '700',
+    color: '#000',
+  },
+  cardDetails: {
+    fontSize: 12,        // comme avant
+    fontWeight: '400',
+    color: '#444',
+    marginTop: 4,
+  },
+  smallButton: {
+    backgroundColor: '#2E4FD1E5',
+    paddingHorizontal: 9,
+    paddingVertical: 11,  // ajusté à 11 comme avant
+    borderRadius: 8,
+  },
+  smallButtonText: {
+    color: '#fff',
+    fontSize: 14,        // comme avant
+    fontWeight: '700',
+  },
+
+  pracList: {
+    marginTop: 10,
+    position: 'relative',
   },
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
+    left: 20,
+    right: 20,
+    height: 80,
+    zIndex: 1,
+  },
+  overlayContent: {
+    position: 'absolute',
+    bottom: 16,
     left: 0,
     right: 0,
-    height: 60, // Ajuste selon ton besoin
-    zIndex: 1,
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  typicalText: {
-    color: '#000',
-    fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: 500,
-    fontStyle: 'normal',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    zIndex: 2,
   },
-  cardTitle: {
-    color: 'black',
-    fontSize: 15,
-    fontWeight: '700',
-    fontFamily: 'Inter',
-    textAlign: 'left',
-  },
-  button: {
-    marginLeft: 20, // espace entre le texte et le bouton
-    paddingVertical: 9,
-    paddingHorizontal: 11,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2E4FD1E5',
-  },
-  buttonText: {
-    color: '#FFF',
-    textAlign: 'right',
-    fontFamily: 'Inter',
-    fontSize: 15,
-    fontStyle: 'normal',
-    fontWeight: '700',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 16, // for safe area
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#fff',
-  },
-  headerTextContainer: {
-    flexDirection: 'column',
-  },
-  headerGreeting: {
-    fontSize: 16,
-    color: '#444',
-    fontFamily: 'Inter',
-  },
-  headerName: {
-    fontSize: 18,
-    color: '#222',
-    marginTop: 2,
-    fontFamily: 'Inter',
-  },
-  bellIcon: {
-    marginLeft: 16,
-  },
-  container: {
-    alignItems: 'center',
-  },
-  firstContainer: {
-    alignItems: 'center',
-    marginTop: 98,
-    marginBottom: 98,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#222',
-    fontFamily: 'Inter',
-  },
-  divCard: {
-    flex: 1, // occupe tout l’espace dispo à gauche
-    paddingRight: 10,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    alignSelf: 'stretch',
-  },
-  card: {
-    height: 59,
-    alignSelf: 'stretch',
-    marginBottom: 17,
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#FFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 4, height: 5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  subtitle: {
-    color: 'black',
-    fontSize: 8,
-    fontFamily: 'Inter',
-    fontWeight: '400',
-    textAlign: 'center',
-  },
+
   doctorCard: {
-    width: 424,
-    paddingHorizontal: 15,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#FFF',
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
   },
-
   doctorImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
   },
-
-  doctorInfo: {
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  doctorName: {
-    fontSize: 15,
-    fontWeight: '700',
-    fontFamily: 'Inter',
-    color: '#000',
-  },
-
   doctorSpecialty: {
-    fontSize: 13,
+    fontSize: 14,        // comme avant
     fontWeight: '500',
-    fontFamily: 'Inter',
     color: '#444',
+    marginTop: 2,
   },
-
   doctorAddress: {
-    fontSize: 10,
+    fontSize: 12,        // comme avant
     fontWeight: '400',
-    fontFamily: 'Inter',
     color: '#777',
+    marginTop: 2,
   },
 });
