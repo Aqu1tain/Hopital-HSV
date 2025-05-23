@@ -1,4 +1,5 @@
 import React from 'react';
+
 import {
   View,
   Text,
@@ -113,6 +114,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
     </View>
   );
 }
@@ -152,6 +154,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
+
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
