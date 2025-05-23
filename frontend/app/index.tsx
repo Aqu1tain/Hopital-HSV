@@ -13,7 +13,7 @@ SplashScreen.setOptions({
 function SplashScreenComponent() {
   return (
     <View style={styles.splashScreen}>
-      <Image style={styles.image} source={require('C:/Users/Valentin/Documents/SupdeVinci/B3/Cours/React/learn/Hopital-HSV/frontend/assets/images/logo.png')}/>
+      <Image style={styles.image} source={require('./frontend/app/(tabs)/index.tsx')}/>
     </View>
   );
 }
