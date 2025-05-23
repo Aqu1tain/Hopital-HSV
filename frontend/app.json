@@ -8,11 +8,6 @@
     "scheme": "hopitalhsv",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./docs/images/Loading.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true
     },
@@ -33,10 +28,15 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/loading.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#232323"
+          "backgroundColor": "#ffffff",
+          "image": "./assets/images/logo.png",
+          "dark":
+          {
+            "image": "./assets/images/logo.png",
+            "imageWidth": 200,
+            "resizeMode": "contain",
+            "backgroundColor": "#ffffff"
+          }
         }
       ]
     ],

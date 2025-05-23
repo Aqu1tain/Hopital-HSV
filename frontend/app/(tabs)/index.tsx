@@ -25,13 +25,7 @@ const RDVButton: React.FC<Props> = ({ title, onPress }) => {
   );
 };
 
-function SplashScreenComponent(props) {
-  return (
-    <View style={styles.splashScreen}>
-      <Image style={styles.image} source={require('../../assets/images/logo.png')}/>
-    </View>
-  );
-}
+
 
 function HomeScreen() {
   return (
