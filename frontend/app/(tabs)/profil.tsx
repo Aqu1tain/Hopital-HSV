@@ -1,49 +1,86 @@
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import AppHeader from '../../components/AppHeader';
 import React from 'react';
 
 const Bandeau = () => {
-  return <View style={styles.bandeau}></View>
+  return <View style={styles.bandeau}></View>;
+};
+
+interface TextProps {
+  textView: string;
+  textSecondaryView: string;
 }
+
+const Texte: React.FC<TextProps> = ({ textView, textSecondaryView }) => {
+  return (
+    <View style={{ marginTop: 10, flexDirection: 'row' }}>
+      <Text style={styles.text}>{textView}</Text>
+      <Text style={styles.textSecondary}>{textSecondaryView}</Text>
+    </View>
+  );
+};
 
 export default function ProfilScreen() {
   return (
-    <View style={{flex: 1, backgroundColor: '#fff'}}>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <AppHeader />
-      <Bandeau />
-      <View style={styles.imageWrapper}>
-        <Image
-          source={require('@/assets/images/pdp.png')}
-          style={styles.image}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Bandeau />
+        <View style={styles.imageWrapper}>
+          <Image
+            source={require('@/assets/images/pdp.png')}
+            style={styles.image}
           />
           <Text style={styles.pseudo}>Valentin LAMOUCHE</Text>
-      </View>
-      <View style={styles.container}>
-          <Text style={[styles.titre, {marginTop: -100}]}>Informations personnelles</Text>
-      </View>
+        </View>
+        <View style={styles.container}>
+          <Text style={styles.titre}>Informations personnelles</Text>
+          <Texte textView="Date de Naissance : " textSecondaryView="10 mars 2005" />
+          <Texte textView="Poids : " textSecondaryView="83" />
+          <Texte textView="Allergies : " textSecondaryView="Pollen, poussière, bouleau, poils de chat" />
+          <Texte textView="Antécédents médicaux : " textSecondaryView="Fracture avant bras gauche" />
+          <Texte textView="Sexe : " textSecondaryView="Homme" />
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'center',
     paddingLeft: 33,
+    paddingTop: 10, // Add padding to avoid overlap with pseudo
     backgroundColor: '#fff',
   },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingBottom: 40,
+  },
   titre: {
-    color: '#000', 
-    fontSize: 18, 
-    fontStyle: 'normal', 
-    fontWeight: '600', 
-    lineHeight: undefined, 
+    color: '#000',
+    fontSize: 18,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  text: {
+    color: '#000',
+    fontSize: 15,
+    fontStyle: 'normal',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  textSecondary: {
+    color: '#000',
+    fontSize: 15,
+    fontStyle: 'normal',
+    fontFamily: 'Inter',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16, // for safe area
+    paddingTop: 16,
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: '#fff',
@@ -67,13 +104,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#007BFF',
   },
   imageWrapper: {
-    position: 'absolute',
-    top: 177, 
-    left: '50%',
-    transform: [{ translateX: -80 }], 
-    zIndex: 2,
-    alignSelf: 'center', 
-    alignItems: 'center',
+    alignItems: 'center', // Center image and pseudo horizontally
+    marginTop: -60, // Pull image up to overlap bandeau
   },
   pseudo: {
     marginTop: 10,
@@ -88,6 +120,6 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#fff', // Optionnel : bord blanc autour de l'image
+    borderColor: '#fff',
   },
 });
