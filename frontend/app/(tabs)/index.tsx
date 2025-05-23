@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontSize: 14,        // comme avant
-    fontWeight: '700',
+    fontWeight: '500',
   },
 
   sectionTitle: {
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,        // comme avant
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#000',
   },
   cardDetails: {
@@ -175,18 +175,19 @@ const styles = StyleSheet.create({
     color: '#444',
     marginTop: 4,
   },
+
   smallButton: {
     backgroundColor: '#2E4FD1E5',
     paddingHorizontal: 9,
     paddingVertical: 11,  // ajusté à 11 comme avant
     borderRadius: 8,
   },
+
   smallButtonText: {
     color: '#fff',
     fontSize: 14,        // comme avant
-    fontWeight: '700',
+    fontWeight: '500',
   },
-
   pracList: {
     marginTop: 10,
     position: 'relative',
@@ -194,9 +195,9 @@ const styles = StyleSheet.create({
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
-    left: 20,
-    right: 20,
-    height: 80,
+    left: 0,
+    right: 0  ,
+    height: 200,
     zIndex: 1,
   },
   overlayContent: {
