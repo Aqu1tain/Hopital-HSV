@@ -384,6 +384,64 @@ app.get('/test-email', async (req, res) => {
   }
 });
 
+// Route: Récupérer les infos de l'utilisateur connecté
+app.get('/me', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+
+    // 1. Récupérer les infos de base de l'utilisateur
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+
+    let userData = {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone: user.phone,
+      email: user.email,
+      role: user.role,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
+
+    // 2. Récupérer les infos spécifiques au rôle
+    if (user.role === 'practitioner') {
+      const { data: practitioner, error: practitionerError } = await supabase
+        .from('practitioners')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (!practitionerError && practitioner) {
+        userData.profile = practitioner;
+      }
+    } else if (user.role === 'patient') {
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (!patientError && patient) {
+        userData.profile = patient;
+      }
+    }
+
+    return res.json(userData);
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération des infos utilisateur:', error);
+    return res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
