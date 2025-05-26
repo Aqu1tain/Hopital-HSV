@@ -14,7 +14,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import * as DocumentPicker from 'expo-document-picker';
 
-const BACKEND_URL = 'http://192.168.235.59:3000';
+import config from '../config/config';
 
 export default function PractitionerSignup() {
   const [fields, setFields] = useState({
@@ -70,7 +70,7 @@ export default function PractitionerSignup() {
         type: proof.mimeType || 'application/octet-stream',
       } as any);
 
-      const res = await fetch(`${BACKEND_URL}/signup/practitioner`, {
+      const res = await fetch(`${config.API_URL}/signup/practitioner`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',

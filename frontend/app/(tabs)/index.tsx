@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import AppHeader from '../../components/AppHeader';
 import { useAuth } from '../auth-context';
+import config from '../../config/config';
 
 interface Appointment {
   id: string;
@@ -94,7 +95,7 @@ export default function HomeScreen() {
       setRefreshing(true);
       
       // Fetch upcoming appointments
-      const upcomingRes = await fetch('http://localhost:3000/api/appointments/upcoming', {
+      const upcomingRes = await fetch(`${config.API_URL}/api/appointments/upcoming`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ export default function HomeScreen() {
       const upcomingData = await upcomingRes.json();
       
       // Fetch past appointments
-      const pastRes = await fetch('http://localhost:3000/api/appointments/past', {
+      const pastRes = await fetch(`${config.API_URL}/api/appointments/past`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -112,7 +113,7 @@ export default function HomeScreen() {
       const pastData = await pastRes.json();
       
       // Fetch available practitioners
-      const practitionersRes = await fetch('http://localhost:3000/api/practitioners/available', {
+      const practitionersRes = await fetch(`${config.API_URL}/api/practitioners/available`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

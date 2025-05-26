@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import config from '../config/config';
+
 interface UserData {
   id: string;
   email: string;
@@ -58,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch('http://localhost:3000/me', {
+      const response = await fetch(`${config.API_URL}/me`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -91,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       // Appeler la route de déconnexion du serveur si nécessaire
-      await fetch('http://localhost:3000/auth/logout', { 
+      await fetch(`${config.API_URL}/auth/logout`, { 
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

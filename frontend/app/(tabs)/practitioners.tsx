@@ -11,10 +11,14 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  Alert,
+  Modal,
 } from 'react-native';
+import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../../components/AppHeader';
 import { useAuth } from '../auth-context';
+import config from '../../config/config';
 
 interface Practitioner {
   id: string;
@@ -31,6 +35,11 @@ interface Practitioner {
     check: boolean;
     cash: boolean;
   };
+}
+
+interface LocationType {
+  city?: string;
+  district?: string;
 }
 
 const FILTERS = [
@@ -57,27 +66,36 @@ export default function PraticiensScreen() {
   const [filteredPractitioners, setFilteredPractitioners] = useState<Practitioner[]>([]);
   const [selectedSpecialty, setSelectedSpecialty] = useState('all');
   const [selectedPayment, setSelectedPayment] = useState('all');
-  const [location, setLocation] = useState({ city: 'Paris 6', distance: 5 });
+  const [selectedLocation, setSelectedLocation] = useState<{
+    name: string;
+    value: LocationType;
+  } | null>(null);
+  const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
+  const [locationInput, setLocationInput] = useState('');
 
   const fetchPractitioners = async () => {
-    if (!token) return;
+    if (!token || !selectedLocation) return;
     
     try {
       setRefreshing(true);
-      const response = await fetch('http://localhost:3000/api/practitioners', {
+      const response = await fetch(`${config.API_URL}/api/practitioners`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          location: selectedLocation.value
+        })
       });
       
-      if (!response.ok) throw new Error('Failed to fetch practitioners');
+      if (!response.ok) throw new Error('Échec de la récupération des praticiens');
       
       const data = await response.json();
       setPractitioners(data);
       setFilteredPractitioners(data);
     } catch (error) {
-      console.error('Error fetching practitioners:', error);
+      console.error('Erreur lors de la récupération des praticiens:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -85,8 +103,47 @@ export default function PraticiensScreen() {
   };
 
   useEffect(() => {
-    fetchPractitioners();
-  }, [token]);
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          // Définir Paris 6 par défaut si la localisation n'est pas autorisée
+          setSelectedLocation({ 
+            name: 'Paris 6', 
+            value: { city: 'Paris', district: '75006' } 
+          });
+          return;
+        }
+
+        const location = await Location.getCurrentPositionAsync({});
+        const address = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+
+        const city = address[0]?.city || 'Paris';
+        const district = address[0]?.postalCode?.substring(0, 2) === '75' ? 
+          address[0]?.postalCode.substring(2) : '6';
+
+        setSelectedLocation({ 
+          name: `${city} ${district}`, 
+          value: { city, district }
+        });
+      } catch (error) {
+        console.error('Erreur de géolocalisation:', error);
+        setSelectedLocation({ 
+          name: 'Paris 6', 
+          value: { city: 'Paris', district: '75006' }
+        });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchPractitioners();
+    }
+  }, [token, selectedLocation]);
 
   useEffect(() => {
     // Apply filters and search
@@ -152,6 +209,38 @@ export default function PraticiensScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  const handleLocationSelect = () => {
+    setLocationInput('');
+    setIsLocationModalVisible(true);
+  };
+
+  const handleLocationSubmit = () => {
+    if (!locationInput.trim()) {
+      setIsLocationModalVisible(false);
+      return;
+    }
+
+    try {
+      // Extraire le code postal si présent (format: Paris 75006 ou 75006)
+      const postalCodeMatch = locationInput.match(/\b(\d{5})\b/);
+      const district = postalCodeMatch ? postalCodeMatch[1] : null;
+      const city = locationInput.replace(/\s*\d{5}\s*$/, '').trim() || 'Paris';
+      
+      setSelectedLocation({
+        name: `${city}${district ? ` ${district}` : ''}`.trim(),
+        value: { 
+          city: city || 'Paris',
+          district: district || undefined 
+        }
+      });
+    } catch (error) {
+      console.error('Erreur de recherche de localisation:', error);
+      Alert.alert('Erreur', 'Impossible de traiter cette localisation');
+    } finally {
+      setIsLocationModalVisible(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -246,10 +335,10 @@ export default function PraticiensScreen() {
         <View style={styles.zone}>
           <Text style={styles.zoneLabel}>Praticiens à proximité</Text>
           <View style={styles.zoneInfo}>
-            <Text style={styles.zoneText}>
-              Zone : {location.city} ({location.distance} km)
+            <Text style={styles.zoneText} numberOfLines={1}>
+              {selectedLocation?.name || 'Chargement...'}
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={handleLocationSelect} style={{ padding: 8 }}>
               <Text style={styles.zoneChange}>Changer</Text>
             </TouchableOpacity>
           </View>
@@ -290,6 +379,44 @@ export default function PraticiensScreen() {
           </View>
         )}
       </View>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isLocationModalVisible}
+        onRequestClose={() => setIsLocationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Changer de zone</Text>
+            <Text style={styles.modalSubtitle}>Entrez votre ville ou code postal (ex: Paris 75006)</Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              value={locationInput}
+              onChangeText={setLocationInput}
+              placeholder="Ex: Paris 75006"
+              autoFocus={true}
+              onSubmitEditing={handleLocationSubmit}
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setIsLocationModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={handleLocationSubmit}
+              >
+                <Text style={styles.submitButtonText}>Valider</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -469,5 +596,64 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  submitButton: {
+    backgroundColor: '#2E4FD1',
+  },
+  cancelButtonText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  submitButtonText: {
+    color: 'white',
+    fontWeight: '500',
   },
 });

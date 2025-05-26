@@ -514,10 +514,30 @@ app.get('/api/appointments/past', authMiddleware, async (req, res) => {
   }
 });
 
-// Get all practitioners with their details
-app.get('/api/practitioners', authMiddleware, async (req, res) => {
+// Add this helper function to calculate distance between coordinates
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // Distance in km
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180);
+}
+
+// Recherche de praticiens avec filtrage par localisation
+app.post('/api/practitioners', authMiddleware, async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { location } = req.body || {};
+    
+    // Construire la requête de base
+    let query = supabase
       .from('practitioners')
       .select(`
         user_id,
@@ -546,12 +566,33 @@ app.get('/api/practitioners', authMiddleware, async (req, res) => {
           profile_url,
           created_at
         )
-      `)
-      .order('created_at', { foreignTable: 'users', ascending: false });
+      `);
 
+    // Appliquer le filtre de localisation si fourni
+    if (location?.city || location?.district) {
+      const searchTerm = location.district || location.city;
+      
+      // Créer une condition de recherche pour la ville et le code postal
+      const cityCondition = location.city ? 
+        `city.ilike.%${location.city}%` : '';
+      
+      const postalCodeCondition = location.district ?
+        `postal_code.ilike.%${location.district}%` : '';
+      
+      // Combiner les conditions avec OR
+      if (cityCondition && postalCodeCondition) {
+        query = query.or(`${cityCondition},${postalCodeCondition}`);
+      } else if (cityCondition) {
+        query = query.or(cityCondition);
+      } else if (postalCodeCondition) {
+        query = query.or(postalCodeCondition);
+      }
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
 
-    // Format the response to match the frontend expectations
+    // Formater la réponse selon les attentes du frontend
     const formattedData = data.map(practitioner => ({
       id: practitioner.user_id,
       name: `${practitioner.users.first_name} ${practitioner.users.last_name}`,
@@ -570,14 +611,14 @@ app.get('/api/practitioners', authMiddleware, async (req, res) => {
       conventioned: practitioner.conventioned || false,
       isVerified: practitioner.is_verified || false,
       price: practitioner.standard_price_cents ? {
-        amount: practitioner.standard_price_cents / 100, // Convert to euros
+        amount: practitioner.standard_price_cents / 100, // Convertir en euros
         currency: 'EUR',
         secuCoverage: practitioner.secu_coverage_percent || 0
       } : null,
       payment_methods: {
         card: practitioner.payment_card || false,
         bank_transfer: practitioner.payment_bank_transfer || false,
-        check: practitioner.payment_cheque || false, // Note: using 'check' instead of 'cheque' for frontend consistency
+        check: practitioner.payment_cheque || false,
         cash: practitioner.payment_cash || false
       },
       email: practitioner.users.email,
@@ -587,8 +628,8 @@ app.get('/api/practitioners', authMiddleware, async (req, res) => {
 
     res.json(formattedData);
   } catch (error) {
-    console.error('Error fetching practitioners:', error);
-    res.status(500).json({ error: 'Failed to fetch practitioners' });
+    console.error('Erreur lors de la récupération des praticiens:', error);
+    res.status(500).json({ error: 'Échec de la récupération des praticiens' });
   }
 });
 

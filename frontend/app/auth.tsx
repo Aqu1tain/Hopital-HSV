@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from './auth-context';
 
-const BACKEND_URL = 'http://192.168.68.130:3000'; // Change if needed
+import config from '../../config/config';
 
 type Step = 'email' | 'code' | 'signup';
 type MainStep = Step | 'practitioner';
@@ -57,7 +57,7 @@ export default function AuthScreen() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/request`, {
+      const res = await fetch(`${config.API_URL}/auth/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
