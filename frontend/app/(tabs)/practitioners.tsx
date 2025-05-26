@@ -1,5 +1,5 @@
 // PraticiensScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -9,125 +9,286 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../../components/AppHeader';
+import { useAuth } from '../auth-context';
+
+interface Practitioner {
+  id: string;
+  name: string;
+  title: string;
+  specialty: string;
+  address: string;
+  image: string;
+  accepts_mutuelle: boolean;
+  conventioned: boolean;
+  payment_methods: {
+    card: boolean;
+    bank_transfer: boolean;
+    check: boolean;
+    cash: boolean;
+  };
+}
 
 const FILTERS = [
-  { key: 'specialite', label: 'Spécialité : Toutes' },
-  { key: 'conventionne', label: 'Conventionné : Oui' },
-  { key: 'paiement', label: 'Paiement : Carte vitale' },
+  { key: 'all', label: 'Toutes les spécialités' },
+  { key: 'general', label: 'Médecine générale' },
+  { key: 'pediatric', label: 'Pédiatrie' },
+  { key: 'cardiology', label: 'Cardiologie' },
+  { key: 'osteopathy', label: 'Ostéopathie' },
 ];
 
-const PRACTICIENS = [
-  {
-    id: '1',
-    nom: 'Dr. Rozières',
-    spec: 'Médecin Généraliste',
-    adresse: '14 rue Boissonade, 75014 PARIS',
-    avatar: require('@/assets/images/rozieres.png'),
-  },
-  {
-    id: '2',
-    nom: 'Dr. Goldman-Saxe',
-    spec: 'Pédiatre',
-    adresse: '7 rue Campagne-Première, 75006 PARIS',
-    avatar: require('@/assets/images/rozieres.png'),
-  },
-  {
-    id: '3',
-    nom: 'Dr. Martinez',
-    spec: 'Cardiologue',
-    adresse: '2 boulevard du Port Royal, 75006 PARIS',
-    avatar: require('@/assets/images/rozieres.png'),
-  },
-  {
-    id: '4',
-    nom: 'M. Lanson',
-    spec: 'Ostéopathe',
-    adresse: '123 boulevard Saint-Michel, 75006 PARIS',
-    avatar: require('@/assets/images/rozieres.png'),
-  },
-  {
-    id: '5',
-    nom: 'Dr. Petit',
-    spec: 'Médecin Généraliste',
-    adresse: '2 rue du Panthéon, 75006 PARIS',
-    avatar: require('@/assets/images/rozieres.png'),
-  },
+const PAYMENT_FILTERS = [
+  { key: 'all', label: 'Tous les paiements' },
+  { key: 'carte_vitale', label: 'Carte vitale' },
+  { key: 'mutuelle', label: 'Mutuelle' },
 ];
 
 export default function PraticiensScreen() {
+  const { token } = useAuth();
   const [search, setSearch] = useState('');
   const [focused, setFocused] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [practitioners, setPractitioners] = useState<Practitioner[]>([]);
+  const [filteredPractitioners, setFilteredPractitioners] = useState<Practitioner[]>([]);
+  const [selectedSpecialty, setSelectedSpecialty] = useState('all');
+  const [selectedPayment, setSelectedPayment] = useState('all');
+  const [location, setLocation] = useState({ city: 'Paris 6', distance: 5 });
 
-  const filteredData = PRACTICIENS.filter(p =>
-    p.nom.toLowerCase().includes(search.toLowerCase()) ||
-    p.spec.toLowerCase().includes(search.toLowerCase())
-  );
+  const fetchPractitioners = async () => {
+    if (!token) return;
+    
+    try {
+      setRefreshing(true);
+      const response = await fetch('http://localhost:3000/api/practitioners', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch practitioners');
+      
+      const data = await response.json();
+      setPractitioners(data);
+      setFilteredPractitioners(data);
+    } catch (error) {
+      console.error('Error fetching practitioners:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const renderItem = ({ item }: { item: any }) => (
+  useEffect(() => {
+    fetchPractitioners();
+  }, [token]);
+
+  useEffect(() => {
+    // Apply filters and search
+    let result = [...practitioners];
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      result = result.filter(
+        p =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.specialty.toLowerCase().includes(searchLower) ||
+          p.title.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply specialty filter
+    if (selectedSpecialty !== 'all') {
+      result = result.filter(p => 
+        p.specialty.toLowerCase() === selectedSpecialty.toLowerCase()
+      );
+    }
+
+    // Apply payment filter
+    if (selectedPayment === 'carte_vitale') {
+      result = result.filter(p => p.conventioned);
+    } else if (selectedPayment === 'mutuelle') {
+      result = result.filter(p => p.accepts_mutuelle);
+    }
+
+    setFilteredPractitioners(result);
+  }, [search, selectedSpecialty, selectedPayment, practitioners]);
+
+  const renderItem = ({ item }: { item: Practitioner }) => (
     <TouchableOpacity style={styles.card}>
-      <Image source={item.avatar} style={styles.avatar} />
+      <Image 
+        source={{ uri: item.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png' }} 
+        style={styles.avatar} 
+        defaultSource={require('@/assets/images/placeholder-doctor.jpg')}
+      />
       <View style={styles.info}>
-        <Text style={styles.name}>{item.nom}</Text>
-        <Text style={styles.spec}>{item.spec}</Text>
-        <Text style={styles.adresse}>{item.adresse}</Text>
+        <Text style={styles.name}>
+          {item.title ? `${item.title} ` : ''}{item.name}
+        </Text>
+        <Text style={styles.spec}>{item.specialty}</Text>
+        <Text style={styles.adresse} numberOfLines={1} ellipsizeMode="tail">
+          {item.address}
+        </Text>
+        <View style={styles.paymentIcons}>
+          {item.conventioned && (
+            <View style={styles.paymentIcon}>
+              <Ionicons name="card-outline" size={16} color="#2E4FD1" />
+              <Text style={styles.paymentText}>Carte Vitale</Text>
+            </View>
+          )}
+          {item.accepts_mutuelle && (
+            <View style={styles.paymentIcon}>
+              <Ionicons name="medkit-outline" size={16} color="#2E4FD1" />
+              <Text style={styles.paymentText}>Mutuelle</Text>
+            </View>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <AppHeader />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2E4FD1" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <AppHeader />
+      <View style={styles.content}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" />
+          <TextInput
+            style={[styles.searchInput, { borderColor: focused ? '#2E4FD1' : '#C7C7C7' }]}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Rechercher un médecin, un praticien"
+            value={search}
+            onChangeText={setSearch}
+            placeholderTextColor="#7B7B7B"
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
 
-        <View style={styles.content}>
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#666" />
-            <TextInput
-              style={[styles.searchInput, { borderColor: focused ? '#fff' : '#fff' }]}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder="Rechercher un médecin, un praticien"
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Ionicons name="close-circle" size={20} color="#666" />
+        {/* Specialty Filters */}
+        <View style={styles.filtersContainer}>
+          <Text style={styles.filterLabel}>Spécialité :</Text>
+          <FlatList
+            horizontal
+            data={FILTERS}
+            keyExtractor={item => item.key}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  selectedSpecialty === item.key && styles.filterBtnActive
+                ]}
+                onPress={() => setSelectedSpecialty(item.key)}
+              >
+                <Text style={[
+                  styles.filterText,
+                  selectedSpecialty === item.key && styles.filterTextActive
+                ]}>
+                  {item.label}
+                </Text>
               </TouchableOpacity>
             )}
-          </View>
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersList}
+          />
+        </View>
 
-          {/* Filtres */}
-          <View style={styles.filters}>
-            <Ionicons name='funnel-outline' size={20} color="#666" />
-            {FILTERS.map(f => (
-              <TouchableOpacity key={f.key} style={styles.filterBtn}>
-                <Text style={styles.filterText}>{f.label}</Text>
-                <Ionicons name="chevron-down" size={14} color="#444" />
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Zone et titre */}
-          <View style={styles.zone}>
-            <Text style={styles.zoneLabel}>Praticiens à proximité</Text>
-            <View style={styles.zoneInfo}>
-              <Text style={styles.zoneText}>Zone : Paris 6 (5 km)</Text>
-              <TouchableOpacity>
-                <Text style={styles.zoneChange}>Changer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Liste */}
+        {/* Payment Filters */}
+        <View style={styles.filtersContainer}>
+          <Text style={styles.filterLabel}>Paiement :</Text>
           <FlatList
-            data={filteredData}
+            horizontal
+            data={PAYMENT_FILTERS}
+            keyExtractor={item => item.key}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.filterBtn,
+                  selectedPayment === item.key && styles.filterBtnActive
+                ]}
+                onPress={() => setSelectedPayment(item.key)}
+              >
+                <Text style={[
+                  styles.filterText,
+                  selectedPayment === item.key && styles.filterTextActive
+                ]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            )}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersList}
+          />
+        </View>
+
+        {/* Location */}
+        <View style={styles.zone}>
+          <Text style={styles.zoneLabel}>Praticiens à proximité</Text>
+          <View style={styles.zoneInfo}>
+            <Text style={styles.zoneText}>
+              Zone : {location.city} ({location.distance} km)
+            </Text>
+            <TouchableOpacity>
+              <Text style={styles.zoneChange}>Changer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Practitioners List */}
+        {filteredPractitioners.length > 0 ? (
+          <FlatList
+            data={filteredPractitioners}
             keyExtractor={item => item.id}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={fetchPractitioners}
+                colors={['#2E4FD1']}
+                tintColor="#2E4FD1"
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Ionicons name="search-outline" size={48} color="#C7C7C7" />
+                <Text style={styles.emptyText}>Aucun praticien trouvé</Text>
+                <Text style={styles.emptySubtext}>
+                  Essayez de modifier vos critères de recherche
+                </Text>
+              </View>
+            }
           />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="search-outline" size={48} color="#C7C7C7" />
+            <Text style={styles.emptyText}>Aucun praticien trouvé</Text>
+            <Text style={styles.emptySubtext}>
+              Essayez de modifier vos critères de recherche
+            </Text>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -136,132 +297,177 @@ export default function PraticiensScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 26,
-    paddingVertical: 10,
-    gap: 23,
-    flex:1,
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#f8f9fa',
   },
   searchContainer: {
     flexDirection: 'row',
-    padding: 10,
+    padding: 12,
     alignItems: 'center',
     gap: 10,
-    alignSelf: 'stretch',
     backgroundColor: '#fff',
     borderRadius: 10,
-    borderColor: '#C7C7C7',
     borderWidth: 1,
+    borderColor: '#C7C7C7',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Inter',
-    color: '#7B7B7B',
+    color: '#333',
+    padding: 0,
   },
-  filters: {
-    height: 34,
-    alignItems: 'center',
-    gap: 10,
-    flexDirection: 'row',
-    alignSelf: 'stretch',    
+  filtersContainer: {
+    marginBottom: 12,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#444',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  filtersList: {
+    paddingHorizontal: 4,
   },
   filterBtn: {
-    padding: 10,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     backgroundColor: '#fff',
-    borderColor: '#c7c7c7',
     borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-    justifyContent: 'space-between',
+    borderColor: '#ddd',
+    marginRight: 8,
+  },
+  filterBtnActive: {
+    backgroundColor: '#2E4FD1',
+    borderColor: '#2E4FD1',
   },
   filterText: {
-    fontSize: 12,
-    fontFamily: 'Inter',
-    color: '#444',
+    fontSize: 14,
+    color: '#666',
+  },
+  filterTextActive: {
+    color: '#fff',
+    fontWeight: '500',
   },
   zone: {
-    marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   zoneLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#222',
+    marginBottom: 4,
   },
   zoneInfo: {
     flexDirection: 'row',
-    marginTop: 4,
     alignItems: 'center',
   },
   zoneText: {
     fontSize: 14,
-    fontFamily: 'Inter',
     color: '#666',
+    marginRight: 8,
   },
   zoneChange: {
-    marginLeft: 8,
+    color: '#2E4FD1',
     fontSize: 14,
-    fontFamily: 'Inter',
-    color: '#007AFF',
+    fontWeight: '500',
   },
   list: {
-    flex: 1,
-    gap: 16,
+    paddingBottom: 24,
   },
   card: {
     flexDirection: 'row',
-    padding: 12,
     backgroundColor: '#fff',
     borderRadius: 12,
-    elevation: 2,           // Android shadow
-    shadowColor: '#000',    // iOS shadow
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
+    elevation: 2,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  onlineBadge: {
-    position: 'absolute',
-    left: 44,
-    top: 44,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#4CD964',
-    borderWidth: 2,
-    borderColor: '#fff',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f0f0',
   },
   info: {
     flex: 1,
-    marginLeft: 12,
-    justifyContent: 'center',
+    marginLeft: 16,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
-    fontFamily: 'Inter',
     color: '#222',
+    marginBottom: 2,
   },
   spec: {
     fontSize: 14,
-    fontFamily: 'Inter',
-    color: '#666',
-    marginVertical: 2,
+    color: '#2E4FD1',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   adresse: {
     fontSize: 13,
-    fontFamily: 'Inter',
-    color: '#999',
+    color: '#666',
+    marginBottom: 8,
+  },
+  paymentIcons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  paymentIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDF0FF',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  paymentText: {
+    fontSize: 12,
+    color: '#2E4FD1',
+    marginLeft: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#444',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

@@ -514,6 +514,84 @@ app.get('/api/appointments/past', authMiddleware, async (req, res) => {
   }
 });
 
+// Get all practitioners with their details
+app.get('/api/practitioners', authMiddleware, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('practitioners')
+      .select(`
+        user_id,
+        title,
+        specialty,
+        street_address,
+        postal_code,
+        city,
+        floor,
+        building_code,
+        public_transport_access,
+        payment_card,
+        payment_bank_transfer,
+        payment_cheque,
+        payment_cash,
+        accepts_mutuelle,
+        conventioned,
+        standard_price_cents,
+        secu_coverage_percent,
+        is_verified,
+        users!inner(
+          first_name,
+          last_name,
+          email,
+          phone,
+          profile_url,
+          created_at
+        )
+      `)
+      .order('created_at', { foreignTable: 'users', ascending: false });
+
+    if (error) throw error;
+
+    // Format the response to match the frontend expectations
+    const formattedData = data.map(practitioner => ({
+      id: practitioner.user_id,
+      name: `${practitioner.users.first_name} ${practitioner.users.last_name}`,
+      title: practitioner.title || 'Dr.',
+      specialty: practitioner.specialty || 'Médecin Généraliste',
+      address: [
+        practitioner.street_address,
+        practitioner.postal_code,
+        practitioner.city
+      ].filter(Boolean).join(', '),
+      floor: practitioner.floor,
+      buildingCode: practitioner.building_code,
+      transportAccess: practitioner.public_transport_access,
+      image: practitioner.users.profile_url || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png',
+      accepts_mutuelle: practitioner.accepts_mutuelle || false,
+      conventioned: practitioner.conventioned || false,
+      isVerified: practitioner.is_verified || false,
+      price: practitioner.standard_price_cents ? {
+        amount: practitioner.standard_price_cents / 100, // Convert to euros
+        currency: 'EUR',
+        secuCoverage: practitioner.secu_coverage_percent || 0
+      } : null,
+      payment_methods: {
+        card: practitioner.payment_card || false,
+        bank_transfer: practitioner.payment_bank_transfer || false,
+        check: practitioner.payment_cheque || false, // Note: using 'check' instead of 'cheque' for frontend consistency
+        cash: practitioner.payment_cash || false
+      },
+      email: practitioner.users.email,
+      phone: practitioner.users.phone,
+      createdAt: practitioner.users.created_at
+    }));
+
+    res.json(formattedData);
+  } catch (error) {
+    console.error('Error fetching practitioners:', error);
+    res.status(500).json({ error: 'Failed to fetch practitioners' });
+  }
+});
+
 // Get available practitioners for today
 app.get('/api/practitioners/available', authMiddleware, async (req, res) => {
   try {

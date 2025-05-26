@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS "public"."practitioners" (
     "secu_coverage_percent" smallint,
     "verification_documents" "text"[] DEFAULT '{}'::"text"[],
     "is_verified" boolean DEFAULT false NOT NULL,
+    "specialty" "text" DEFAULT ''::"text",
     CONSTRAINT "practitioners_secu_coverage_percent_check" CHECK ((("secu_coverage_percent" >= 0) AND ("secu_coverage_percent" <= 100)))
 );
 
