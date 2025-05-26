@@ -14,22 +14,54 @@ interface TextProps {
 }
 
 const Texte: React.FC<TextProps> = ({ textView, textSecondaryView, onChangeText, isEditing }) => {
+  const isMultilineField = textView === 'Allergies : ' || textView === 'Antécédents médicaux : ';
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  const handleTextLayout = (event: any) => {
+    const { lines } = event.nativeEvent;
+    setIsTruncated(lines.length > 1);
+  };
+
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   return (
     <View style={styles.textContainer}>
       <Text style={styles.text}>{textView}</Text>
-      {isEditing ? (
-        <TextInput
-          style={styles.textInput}
-          value={textSecondaryView}
-          onChangeText={onChangeText}
-          multiline={textView === 'Allergies : ' || textView === 'Antécédents médicaux : '}
-          autoCapitalize="none"
-        />
-      ) : (
-        <Text style={styles.textSecondary} numberOfLines={0}>
-          {textSecondaryView}
-        </Text>
-      )}
+      <View style={styles.infoContainer}>
+        {isEditing ? (
+          <TextInput
+            style={styles.textInput}
+            value={textSecondaryView}
+            onChangeText={onChangeText}
+            multiline={isMultilineField}
+            numberOfLines={isMultilineField ? undefined : 1}
+            autoCapitalize="none"
+          />
+        ) : (
+          <View style={styles.textWrapper}>
+            <Text
+              style={styles.textSecondary}
+              numberOfLines={isExpanded ? undefined : 1}
+              onTextLayout={handleTextLayout}
+            >
+              {textSecondaryView}
+            </Text>
+            {isTruncated && !isExpanded && (
+              <TouchableOpacity onPress={toggleExpand}>
+                <Text style={styles.ellipsis}>...</Text>
+              </TouchableOpacity>
+            )}
+            {isExpanded && (
+              <TouchableOpacity onPress={toggleExpand}>
+                <Text style={styles.ellipsis}>Voir moins</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -93,7 +125,9 @@ export default function ProfilScreen() {
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Informations personnelles</Text>
             <TouchableOpacity onPress={handleEditPersonalToggle}>
-              <Text style={styles.editText}>{isEditingPersonal ? 'Enregistrer' : 'Modifier'}</Text>
+              <Text style={[styles.editText, isEditingPersonal && styles.editTextActive]}>
+                {isEditingPersonal ? 'Enregistrer' : 'Modifier'}
+              </Text>
             </TouchableOpacity>
           </View>
           <Texte
@@ -130,7 +164,9 @@ export default function ProfilScreen() {
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Informations de Contact</Text>
             <TouchableOpacity onPress={handleEditContactToggle}>
-              <Text style={styles.editText}>{isEditingContact ? 'Enregistrer' : 'Modifier'}</Text>
+              <Text style={[styles.editText, isEditingContact && styles.editTextActive]}>
+                {isEditingContact ? 'Enregistrer' : 'Modifier'}
+              </Text>
             </TouchableOpacity>
           </View>
           <Texte
@@ -149,7 +185,9 @@ export default function ProfilScreen() {
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Sécurité Sociale</Text>
             <TouchableOpacity onPress={handleEditSocialSecurityToggle}>
-              <Text style={styles.editText}>{isEditingSocialSecurity ? 'Enregistrer' : 'Modifier'}</Text>
+              <Text style={[styles.editText, isEditingSocialSecurity && styles.editTextActive]}>
+                {isEditingSocialSecurity ? 'Enregistrer' : 'Modifier'}
+              </Text>
             </TouchableOpacity>
           </View>
           <Texte
@@ -174,7 +212,9 @@ export default function ProfilScreen() {
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Adresse</Text>
             <TouchableOpacity onPress={handleEditAddressToggle}>
-              <Text style={styles.editText}>{isEditingAddress ? 'Enregistrer' : 'Modifier'}</Text>
+              <Text style={[styles.editText, isEditingAddress && styles.editTextActive]}>
+                {isEditingAddress ? 'Enregistrer' : 'Modifier'}
+              </Text>
             </TouchableOpacity>
           </View>
           <Texte
@@ -206,6 +246,7 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     paddingLeft: 33,
+    paddingRight: 33,
     paddingTop: 10,
     backgroundColor: '#fff',
   },
@@ -217,7 +258,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingRight: 33,
+    marginBottom: 10,
   },
   titre: {
     color: '#000',
@@ -228,16 +269,25 @@ const styles = StyleSheet.create({
   },
   editText: {
     color: '#007BFF',
-    fontSize: 16,
+    fontSize: 15,
     fontStyle: 'normal',
     fontWeight: '600',
     fontFamily: 'Inter',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  editTextActive: {
+    color: '#28A745', // Green color for "Enregistrer"
+    textDecorationLine: 'underline',
   },
   textContainer: {
     flexDirection: 'row',
-    marginTop: 10,
-    flexWrap: 'wrap',
-    maxWidth: width - 66,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    paddingBottom: 8,
   },
   text: {
     color: '#000',
@@ -246,24 +296,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter',
   },
+  infoContainer: {
+    width: 150, // Fixed width for information fields
+    marginRight: 10, // Space from the right edge
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   textSecondary: {
     color: '#000',
     fontSize: 15,
     fontStyle: 'normal',
     fontFamily: 'Inter',
-    flexShrink: 1,
+    textAlign: 'right',
+    flex: 1,
   },
   textInput: {
     color: '#000',
     fontSize: 15,
     fontStyle: 'normal',
     fontFamily: 'Inter',
-    flexShrink: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    padding: 4,
-    minWidth: 100,
+    borderColor: '#007BFF',
+    borderRadius: 6,
+    padding: 8,
+    backgroundColor: '#F8F9FA',
+    textAlign: 'right',
+    width: '100%',
+  },
+  ellipsis: {
+    color: '#007BFF',
+    fontSize: 15,
+    fontStyle: 'normal',
+    fontFamily: 'Inter',
+    marginLeft: 4,
   },
   sectionSeparator: {
     height: 20,
