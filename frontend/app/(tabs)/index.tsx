@@ -240,7 +240,7 @@ export default function HomeScreen() {
               {loading ? (
                 renderLoadingCards(2)
               ) : availablePractitioners.length > 0 ? (
-                availablePractitioners.map((practitioner) => (
+                availablePractitioners.slice(0, 3).map((practitioner) => (
                   <View key={practitioner.id} style={styles.doctorCard}>
                     <Image 
                       source={{ uri: practitioner.image }} 
