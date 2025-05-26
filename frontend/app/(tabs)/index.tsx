@@ -49,7 +49,15 @@ interface Practitioner {
   title?: string;
 }
 
-const Card = ({ title, details, actionText, onAction, loading = false }) => (
+interface CardProps {
+  title: string;
+  details?: string;
+  actionText?: string;
+  onAction?: () => void;
+  loading?: boolean;
+}
+
+const Card = ({ title, details, actionText, onAction, loading = false }: CardProps) => (
   <View style={[styles.card, loading && styles.loadingCard]}>
     <View style={{ flex: 1 }}>
       {loading ? (
