@@ -1,9 +1,19 @@
 import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, TextInput } from 'react-native';
 import AppHeader from '../../components/AppHeader';
 import React, { useState } from 'react';
+import { router } from 'expo-router';
 
 const Bandeau = () => {
-  return <View style={styles.bandeau}></View>;
+  return (
+    <View style={styles.bandeau}>
+      <TouchableOpacity
+        style={styles.settingsButton}
+        onPress={() => router.replace('../settings')}
+      >
+        <Text style={styles.settingsIcon}>⚙️</Text>
+      </TouchableOpacity>
+    </View>
+  );
 };
 
 interface TextProps {
@@ -124,7 +134,11 @@ export default function ProfilScreen() {
         <View style={styles.container}>
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Informations personnelles</Text>
-            <TouchableOpacity onPress={handleEditPersonalToggle}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditPersonalToggle}
+            >
+              <Text style={styles.penIcon}>✎</Text>
               <Text style={[styles.editText, isEditingPersonal && styles.editTextActive]}>
                 {isEditingPersonal ? 'Enregistrer' : 'Modifier'}
               </Text>
@@ -163,7 +177,11 @@ export default function ProfilScreen() {
           <View style={styles.sectionSeparator} />
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Informations de Contact</Text>
-            <TouchableOpacity onPress={handleEditContactToggle}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditContactToggle}
+            >
+              <Text style={styles.penIcon}>✎</Text>
               <Text style={[styles.editText, isEditingContact && styles.editTextActive]}>
                 {isEditingContact ? 'Enregistrer' : 'Modifier'}
               </Text>
@@ -184,7 +202,11 @@ export default function ProfilScreen() {
           <View style={styles.sectionSeparator} />
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Sécurité Sociale</Text>
-            <TouchableOpacity onPress={handleEditSocialSecurityToggle}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditSocialSecurityToggle}
+            >
+              <Text style={styles.penIcon}>✎</Text>
               <Text style={[styles.editText, isEditingSocialSecurity && styles.editTextActive]}>
                 {isEditingSocialSecurity ? 'Enregistrer' : 'Modifier'}
               </Text>
@@ -211,7 +233,11 @@ export default function ProfilScreen() {
           <View style={styles.sectionSeparator} />
           <View style={styles.headerContainer}>
             <Text style={styles.titre}>Adresse</Text>
-            <TouchableOpacity onPress={handleEditAddressToggle}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditAddressToggle}
+            >
+              <Text style={styles.penIcon}>✎</Text>
               <Text style={[styles.editText, isEditingAddress && styles.editTextActive]}>
                 {isEditingAddress ? 'Enregistrer' : 'Modifier'}
               </Text>
@@ -267,6 +293,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter',
   },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  penIcon: {
+    color: '#007BFF',
+    fontSize: 15,
+    marginRight: 4,
+  },
   editText: {
     color: '#007BFF',
     fontSize: 15,
@@ -277,7 +312,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   editTextActive: {
-    color: '#28A745', // Green color for "Enregistrer"
+    color: '#28A745',
     textDecorationLine: 'underline',
   },
   textContainer: {
@@ -297,8 +332,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   infoContainer: {
-    width: 150, // Fixed width for information fields
-    marginRight: 10, // Space from the right edge
+    width: 150,
+    marginRight: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -364,6 +399,17 @@ const styles = StyleSheet.create({
     height: 177,
     width: '100%',
     backgroundColor: '#007BFF',
+    position: 'relative',
+  },
+  settingsButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    padding: 10,
+  },
+  settingsIcon: {
+    color: '#FFFFFF',
+    fontSize: 28,
   },
   imageWrapper: {
     alignItems: 'center',
