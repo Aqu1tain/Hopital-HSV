@@ -442,6 +442,130 @@ app.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// Get upcoming appointments for the current user
+app.get('/api/appointments/upcoming', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const today = new Date().toISOString();
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        scheduled_at,
+        status,
+        notes,
+        patient:patients!appointments_patient_id_fkey(user_id, users(first_name, last_name)),
+        practitioner:practitioners!appointments_practitioner_id_fkey(
+          user_id,
+          users(first_name, last_name, profile_url),
+          title,
+          street_address,
+          city,
+          specialty
+        )
+      `)
+      .or(`patient_id.eq.${userId},practitioner_id.eq.${userId}`)
+      .gte('scheduled_at', today)
+      .order('scheduled_at', { ascending: true });
+
+    if (error) throw error;
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching upcoming appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch upcoming appointments' });
+  }
+});
+
+// Get past appointments for the current user
+app.get('/api/appointments/past', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const today = new Date().toISOString();
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        scheduled_at,
+        status,
+        patient:patients!appointments_patient_id_fkey(user_id, users(first_name, last_name)),
+        practitioner:practitioners!appointments_practitioner_id_fkey(
+          user_id,
+          users(first_name, last_name, profile_url),
+          title,
+          street_address,
+          city,
+          specialty
+        )
+      `)
+      .or(`patient_id.eq.${userId},practitioner_id.eq.${userId}`)
+      .lt('scheduled_at', today)
+      .order('scheduled_at', { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+    
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching past appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch past appointments' });
+  }
+});
+
+// Get available practitioners for today
+app.get('/api/practitioners/available', authMiddleware, async (req, res) => {
+  try {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 (Sunday) to 6 (Saturday)
+    
+    // Get practitioners who are available today
+    const { data: availablePractitioners, error: availabilityError } = await supabase
+      .from('practitioner_availabilities')
+      .select(`
+        practitioner_id,
+        start_time,
+        end_time,
+        practitioners!inner(
+          user_id,
+          users(first_name, last_name, profile_url),
+          title,
+          street_address,
+          city,
+          specialty
+        )
+      `)
+      .eq('weekday', dayOfWeek)
+      .order('start_time', { ascending: true });
+
+    if (availabilityError) throw availabilityError;
+    
+    // Filter out duplicates and format the response
+    const uniquePractitioners = [];
+    const seenIds = new Set();
+    
+    availablePractitioners.forEach(p => {
+      if (!seenIds.has(p.practitioner_id)) {
+        seenIds.add(p.practitioner_id);
+        uniquePractitioners.push({
+          id: p.practitioner_id,
+          name: `${p.practitioners.users.first_name} ${p.practitioners.users.last_name}`,
+          specialty: p.practitioners.specialty || 'Médecin Généraliste',
+          address: `${p.practitioners.street_address || ''}${p.practitioners.city ? `, ${p.practitioners.city}` : ''}`.trim() || 'Adresse non disponible',
+          image: p.practitioners.users.profile_url || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png',
+          title: p.practitioners.title
+        });
+      }
+    });
+    
+    res.json(uniquePractitioners);
+  } catch (error) {
+    console.error('Error fetching available practitioners:', error);
+    res.status(500).json({ error: 'Failed to fetch available practitioners' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

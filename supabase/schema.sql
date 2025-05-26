@@ -171,7 +171,8 @@ CREATE TABLE IF NOT EXISTS "public"."users" (
     "last_name" "text" NOT NULL,
     "role" "public"."user_role" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "profile_url" "text" DEFAULT 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png'::"text"
 );
 
 

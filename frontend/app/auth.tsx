@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from './auth-context';
 
-const BACKEND_URL = 'http://192.168.235.59:3000'; // Change if needed
+const BACKEND_URL = 'http://192.168.68.130:3000'; // Change if needed
 
 type Step = 'email' | 'code' | 'signup';
 type MainStep = Step | 'practitioner';
