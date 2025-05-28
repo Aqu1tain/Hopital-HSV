@@ -75,49 +75,45 @@ export default function PraticiensScreen() {
   const [locationInput, setLocationInput] = useState('');
   const [useLocation, setUseLocation] = useState(true);
 
-  const fetchPractitioners = async () => {
+  // Nouvelle version fetch pour permettre le refresh dans tous les cas
+  const fetchPractitioners = async (options?: { forceNoLocation?: boolean }) => {
     if (!token) {
       console.error('No authentication token found');
       return;
     }
-    
     try {
       setRefreshing(true);
-      
-      // Préparer les données de la requête
-      const requestBody: { location?: { city?: string; postal_code?: string } } = {};
+      setLoading(true);
+  
       let endpoint = `${config.API_URL}/api/practitioners`;
-      
-      // Si la localisation est activée et qu'on a une localisation sélectionnée
-      if (useLocation && selectedLocation) {
-        requestBody.location = {};
-        if (selectedLocation.value.city) requestBody.location.city = selectedLocation.value.city;
-        if (selectedLocation.value.district) requestBody.location.postal_code = selectedLocation.value.district;
-      } else if (useLocation) {
-        // Si la localisation est activée mais qu'on n'a pas encore de localisation
-        console.log('En attente de la localisation...');
-        return;
+      const effectiveUseLocation = options?.forceNoLocation ? false : useLocation;
+  
+      if (effectiveUseLocation && selectedLocation) {
+        const params = [];
+        if (selectedLocation.value.city) params.push(`city=${encodeURIComponent(selectedLocation.value.city)}`);
+        if (selectedLocation.value.district) params.push(`postal_code=${encodeURIComponent(selectedLocation.value.district)}`);
+        if (params.length > 0) endpoint += '?' + params.join('&');
+      } else if (!effectiveUseLocation) {
+        endpoint = `${config.API_URL}/api/practitioners/available`;
       } else {
-        // Si la localisation est désactivée, on utilise un endpoint différent
-        endpoint = `${config.API_URL}/api/practitioners/all`;
+        // En attente de la localisation…
+        setLoading(false);
+        setRefreshing(false);
+        return;
       }
-      
-      console.log('Fetching practitioners from:', endpoint);
-      console.log('Request body:', requestBody);
-      
+  
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : undefined,
+        // Surtout pas de body !
       });
-
-      // Vérifier d'abord le type de contenu de la réponse
+  
       const contentType = response.headers.get('content-type');
       let responseData;
-      
+  
       if (contentType && contentType.includes('application/json')) {
         responseData = await response.json();
       } else {
@@ -125,19 +121,18 @@ export default function PraticiensScreen() {
         console.error('Réponse non-JSON reçue:', text);
         throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`);
       }
-      
+  
       if (!response.ok) {
         console.error('Erreur du serveur:', response.status, responseData);
         throw new Error(responseData.message || `Erreur ${response.status}: ${response.statusText}`);
       }
-      
-      console.log('Données reçues:', responseData);
+  
       setPractitioners(responseData);
       setFilteredPractitioners(responseData);
     } catch (error) {
       console.error('Erreur dans fetchPractitioners:', error);
       Alert.alert(
-        'Erreur', 
+        'Erreur',
         `Impossible de charger les praticiens: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
       );
     } finally {
@@ -145,55 +140,58 @@ export default function PraticiensScreen() {
       setRefreshing(false);
     }
   };
+  
 
+  // Rafraîchir la liste quand on active/désactive la localisation
+  useEffect(() => {
+    if (useLocation) {
+      if (selectedLocation) {
+        fetchPractitioners();
+      } else {
+        console.error('Localisation non trouvée');
+      }
+    } else {
+      fetchPractitioners({ forceNoLocation: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, selectedLocation, useLocation]);
+
+  // Premier montage : essayer de localiser
   useEffect(() => {
     (async () => {
       try {
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          // Définir Paris 6 par défaut si la localisation n'est pas autorisée
-          setSelectedLocation({ 
-            name: 'Paris 6', 
-            value: { city: 'Paris', district: '75006' } 
+          setSelectedLocation({
+            name: 'Paris 6',
+            value: { city: 'Paris', district: '75006' }
           });
           return;
         }
-
         const location = await Location.getCurrentPositionAsync({});
         const address = await Location.reverseGeocodeAsync(location.coords);
-        console.log('Adresse complète:', address); // Debug log
-        
-        // Extraire la ville et le code postal
         const city = address[0]?.city || 'Paris';
-        // Utiliser le code postal complet au lieu de juste le dernier chiffre
         const postalCode = address[0]?.postalCode || '75000';
-        const district = postalCode.startsWith('75') ? postalCode : `${postalCode}`;
-
-        setSelectedLocation({ 
-          name: `${city} ${postalCode}`, 
-          value: { 
-            city, 
-            district: postalCode // Envoyer le code postal complet
+        setSelectedLocation({
+          name: `${city} ${postalCode}`,
+          value: {
+            city,
+            district: postalCode
           }
         });
       } catch (error) {
         console.error('Erreur de géolocalisation:', error);
-        setSelectedLocation({ 
-          name: 'Paris 75006', 
-          value: { 
-            city: 'Paris', 
-            district: '75006' 
+        setSelectedLocation({
+          name: 'Paris 75006',
+          value: {
+            city: 'Paris',
+            district: '75006'
           }
         });
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (selectedLocation) {
-      fetchPractitioners();
-    }
-  }, [token, selectedLocation]);
 
   useEffect(() => {
     // Apply filters and search
@@ -212,7 +210,7 @@ export default function PraticiensScreen() {
 
     // Apply specialty filter
     if (selectedSpecialty !== 'all') {
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.specialty.toLowerCase() === selectedSpecialty.toLowerCase()
       );
     }
@@ -229,9 +227,9 @@ export default function PraticiensScreen() {
 
   const renderItem = ({ item }: { item: Practitioner }) => (
     <TouchableOpacity style={styles.card}>
-      <Image 
-        source={{ uri: item.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png' }} 
-        style={styles.avatar} 
+      <Image
+        source={{ uri: item.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png' }}
+        style={styles.avatar}
         defaultSource={require('@/assets/images/placeholder-doctor.jpg')}
       />
       <View style={styles.info}>
@@ -272,16 +270,14 @@ export default function PraticiensScreen() {
     }
 
     try {
-      // Extraire le code postal si présent (format: Paris 75006 ou 75006)
       const postalCodeMatch = locationInput.match(/\b(\d{5})\b/);
-      const district = postalCodeMatch ? postalCodeMatch[1] : null;
+      const district = postalCodeMatch ? postalCodeMatch[1] : undefined;
       const city = locationInput.replace(/\s*\d{5}\s*$/, '').trim() || 'Paris';
-      
       setSelectedLocation({
         name: `${city}${district ? ` ${district}` : ''}`.trim(),
-        value: { 
+        value: {
           city: city || 'Paris',
-          district: district || undefined 
+          district
         }
       });
     } catch (error) {
@@ -406,7 +402,7 @@ export default function PraticiensScreen() {
             </View>
           </View>
         )}
-        
+
         {/* Practitioners List */}
         {filteredPractitioners.length > 0 ? (
           <FlatList
@@ -417,7 +413,13 @@ export default function PraticiensScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
-                onRefresh={fetchPractitioners}
+                onRefresh={() => {
+                  if (useLocation) {
+                    fetchPractitioners();
+                  } else {
+                    fetchPractitioners({ forceNoLocation: true });
+                  }
+                }}
                 colors={['#2E4FD1']}
                 tintColor="#2E4FD1"
               />
@@ -452,7 +454,6 @@ export default function PraticiensScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Changer de zone</Text>
             <Text style={styles.modalSubtitle}>Entrez votre ville ou code postal (ex: Paris 75006)</Text>
-            
             <TextInput
               style={styles.modalInput}
               value={locationInput}
@@ -461,16 +462,14 @@ export default function PraticiensScreen() {
               autoFocus={true}
               onSubmitEditing={handleLocationSubmit}
             />
-            
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setIsLocationModalVisible(false)}
               >
                 <Text style={styles.cancelButtonText}>Annuler</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalButton, styles.submitButton]}
                 onPress={handleLocationSubmit}
               >

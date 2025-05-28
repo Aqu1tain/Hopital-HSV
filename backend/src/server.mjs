@@ -532,11 +532,10 @@ function deg2rad(deg) {
 }
 
 // Recherche de praticiens avec filtrage par localisation
-app.post('/api/practitioners', authMiddleware, async (req, res) => {
+app.get('/api/practitioners', authMiddleware, async (req, res) => {
   try {
-    const { location } = req.body || {};
-    
-    // Construire la requête de base
+    const { city, postal_code } = req.query;
+
     let query = supabase
       .from('practitioners')
       .select(`
@@ -569,30 +568,22 @@ app.post('/api/practitioners', authMiddleware, async (req, res) => {
       `);
 
     // Appliquer le filtre de localisation si fourni
-    if (location?.city || location?.district) {
-      const searchTerm = location.district || location.city;
-      
-      // Créer une condition de recherche pour la ville et le code postal
-      const cityCondition = location.city ? 
-        `city.ilike.%${location.city}%` : '';
-      
-      const postalCodeCondition = location.district ?
-        `postal_code.ilike.%${location.district}%` : '';
-      
-      // Combiner les conditions avec OR
-      if (cityCondition && postalCodeCondition) {
-        query = query.or(`${cityCondition},${postalCodeCondition}`);
-      } else if (cityCondition) {
-        query = query.or(cityCondition);
-      } else if (postalCodeCondition) {
-        query = query.or(postalCodeCondition);
+    if (city || postal_code) {
+      let orFilters = [];
+      if (city) {
+        orFilters.push(`city.ilike.%${city}%`);
+      }
+      if (postal_code) {
+        orFilters.push(`postal_code.ilike.%${postal_code}%`);
+      }
+      if (orFilters.length > 0) {
+        query = query.or(orFilters.join(","));
       }
     }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    // Formater la réponse selon les attentes du frontend
     const formattedData = data.map(practitioner => ({
       id: practitioner.user_id,
       name: `${practitioner.users.first_name} ${practitioner.users.last_name}`,
