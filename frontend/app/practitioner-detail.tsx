@@ -140,8 +140,12 @@ export default function PractitionerDetailScreen() {
     );
   };
 
-  const navigateToTab = (tab: 'practitioners' | 'profil' | 'home' | 'appointments') => {
-    router.push(`/(tabs)/${tab}` as any);
+  const navigateToTab = (tab: 'practitioners' | 'profil' | 'index') => {
+    if (tab === 'index') {
+      router.push('/');
+    } else {
+      router.push(`/(tabs)/${tab}` as any);
+    }
   };
 
   if (loading) {
@@ -312,7 +316,7 @@ export default function PractitionerDetailScreen() {
       <View style={styles.bottomNavigation}>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigateToTab('practitioners')}
+          onPress={() => navigateToTab('index')}
         >
           <Calendar color="#B0B0B0" size={24} />
           <Text style={styles.navText}>RDV</Text>
