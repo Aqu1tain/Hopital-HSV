@@ -9,13 +9,17 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../components/AppHeader';
 import { useAuth } from './auth-context';
 import config from '../config/config';
-import { Calendar, Hospital, User } from 'lucide-react-native';
+import { Calendar, Hospital, User, MapPin } from 'lucide-react-native';
+
+const { width } = Dimensions.get('window');
 
 interface PractitionerDetail {
   id: string;
@@ -49,6 +53,13 @@ interface AvailableSlot {
   date: string;
   dayName: string;
   dayNumber: string;
+  month: string;
+  available: boolean;
+  timeSlots?: string[];
+}
+
+interface TimeSlot {
+  time: string;
   available: boolean;
 }
 
@@ -60,22 +71,44 @@ export default function PractitionerDetailScreen() {
   const [practitioner, setPractitioner] = useState<PractitionerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<number>(0);
+  const [selectedTime, setSelectedTime] = useState<string>('');
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+
+  // Generate time slots based on selected date
+  const generateTimeSlots = (dayIndex: number): TimeSlot[] => {
+    const morningSlots = ['9:00', '9:30', '10:00', '10:30', '11:00', '11:30'];
+    const afternoonSlots = ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
+    const allSlots = [...morningSlots, ...afternoonSlots];
+    
+    // Simulate some slots being taken
+    return allSlots.map(time => ({
+      time,
+      available: Math.random() > 0.3 // 70% chance of being available
+    }));
+  };
 
   // Generate next 5 days for appointment slots
   const generateAvailableSlots = (): AvailableSlot[] => {
     const slots: AvailableSlot[] = [];
     const today = new Date();
     const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
     
     for (let i = 0; i < 5; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
+      const dayOfWeek = date.getDay();
+      
+      // Make weekends unavailable
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       
       slots.push({
         date: date.toISOString().split('T')[0],
-        dayName: dayNames[date.getDay()],
+        dayName: dayNames[dayOfWeek],
         dayNumber: date.getDate().toString(),
-        available: i !== 2, // Make middle day unavailable as example
+        month: monthNames[date.getMonth()],
+        available: !isWeekend,
       });
     }
     
@@ -121,19 +154,27 @@ export default function PractitionerDetailScreen() {
     fetchPractitioner();
   }, [id, token]);
 
-  const handleBookAppointment = (slot: AvailableSlot) => {
-    if (!slot.available) return;
+  useEffect(() => {
+    // Generate time slots when date selection changes
+    if (availableSlots[selectedSlot]?.available) {
+      setTimeSlots(generateTimeSlots(selectedSlot));
+      setSelectedTime(''); // Reset selected time
+    }
+  }, [selectedSlot, availableSlots]);
+
+  const handleBookAppointment = () => {
+    const slot = availableSlots[selectedSlot];
+    if (!slot.available || !selectedTime) return;
     
     Alert.alert(
-      'Réserver un rendez-vous',
-      `Voulez-vous réserver un rendez-vous le ${slot.dayName} ${slot.dayNumber} ?`,
+      'Confirmer le rendez-vous',
+      `Voulez-vous réserver un rendez-vous le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime} ?`,
       [
         { text: 'Annuler', style: 'cancel' },
         { 
-          text: 'Réserver', 
+          text: 'Confirmer', 
           onPress: () => {
-            // TODO: Implement appointment booking
-            Alert.alert('Succès', 'Rendez-vous réservé avec succès !');
+            Alert.alert('Succès', 'Votre rendez-vous a été confirmé !');
           }
         }
       ]
@@ -174,166 +215,197 @@ export default function PractitionerDetailScreen() {
     <SafeAreaView style={styles.safe}>
       <AppHeader />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header Image and Info */}
-        <View style={styles.headerContainer}>
+        {/* Header Section with Image Background */}
+        <View style={styles.headerSection}>
           <Image
-            source={{ uri: practitioner.image }}
-            style={styles.practitionerImage}
-            defaultSource={require('../assets/images/placeholder-doctor.jpg')}
+            source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Bateau_Lavoir_01.jpg/1200px-Bateau_Lavoir_01.jpg' }}
+            style={styles.backgroundImage}
           />
-          
-          {/* Online status indicator */}
-          <View style={styles.onlineIndicator} />
-          
-          <Text style={styles.practitionerName}>
-            {practitioner.title} {practitioner.name}
-          </Text>
-          <Text style={styles.specialty}>{practitioner.specialty}</Text>
-        </View>
-
-        {/* Address Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="location" size={20} color="#2E4FD1" />
-            <Text style={styles.sectionTitle}>Adresse</Text>
-          </View>
-          <Text style={styles.address}>{practitioner.address}</Text>
-          {practitioner.floor && (
-            <Text style={styles.addressDetail}>{practitioner.floor}</Text>
-          )}
-          {practitioner.buildingCode && (
-            <Text style={styles.addressDetail}>Code: {practitioner.buildingCode}</Text>
-          )}
-        </View>
-
-        {/* Transport Section */}
-        {practitioner.transportAccess && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="train" size={20} color="#2E4FD1" />
-              <Text style={styles.sectionTitle}>Transport:</Text>
-            </View>
-            <Text style={styles.transportText}>{practitioner.transportAccess}</Text>
-          </View>
-        )}
-
-        {/* Tariffs Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="card" size={20} color="#2E4FD1" />
-            <Text style={styles.sectionTitle}>Tarifs et remboursement</Text>
-          </View>
-          {practitioner.conventioned && (
-            <View style={styles.tariffItem}>
-              <Text style={styles.tariffText}>Conventionné secteur 1</Text>
-            </View>
-          )}
-          {practitioner.price && (
-            <>
-              <View style={styles.tariffItem}>
-                <Text style={styles.tariffText}>
-                  {practitioner.price.amount}€ consultation standard
+          <View style={styles.profileOverlay}>
+            <View style={styles.profileInfo}>
+              <Image
+                source={{ uri: practitioner.image }}
+                style={styles.practitionerImage}
+                defaultSource={require('../assets/images/placeholder-doctor.jpg')}
+              />
+              {practitioner.isVerified && (
+                <View style={styles.onlineIndicator} />
+              )}
+              <View style={styles.profileText}>
+                <Text style={styles.practitionerName}>
+                  {practitioner.title ? `${practitioner.title} ${practitioner.name}` : practitioner.name}
                 </Text>
+                <Text style={styles.specialty}>{practitioner.specialty}</Text>
               </View>
-              <View style={styles.tariffItem}>
-                <Text style={styles.tariffText}>
-                  Prise en charge à {practitioner.price.secuCoverage}% par l'assurance maladie
-                </Text>
-              </View>
-            </>
-          )}
+            </View>
+          </View>
         </View>
 
-        {/* Payment Methods Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="wallet" size={20} color="#2E4FD1" />
-            <Text style={styles.sectionTitle}>Moyens de paiement</Text>
+        {/* Info Cards */}
+        <View style={styles.contentContainer}>
+          {/* Address Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Adresse</Text>
+            <View style={styles.addressContent}>
+              <Text style={styles.addressText}>{practitioner.address}</Text>
+              {practitioner.floor && (
+                <Text style={styles.addressSubText}>{practitioner.floor}</Text>
+              )}
+              {practitioner.transportAccess && (
+                <View style={styles.transportSection}>
+                  <Text style={styles.transportLabel}>Transport:</Text>
+                  <Text style={styles.transportText}>{practitioner.transportAccess}</Text>
+                </View>
+              )}
+              <TouchableOpacity style={styles.mapButton}>
+                <MapPin size={20} color="#2E4FD1" />
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.paymentMethods}>
+
+          {/* Tarifs Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Tarifs et remboursement</Text>
+            {practitioner.conventioned && (
+              <Text style={styles.infoText}>• Conventionné secteur 1</Text>
+            )}
+            {practitioner.price && (
+              <>
+                <Text style={styles.infoText}>
+                  • {practitioner.price.amount}€ consultation standard
+                </Text>
+                <Text style={styles.infoText}>
+                  • Prise en charge à {practitioner.price.secuCoverage}% par l'assurance maladie
+                </Text>
+              </>
+            )}
+          </View>
+
+          {/* Payment Methods Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Moyens de paiement</Text>
             {practitioner.payment_methods.card && (
-              <Text style={styles.paymentMethod}>Carte bancaire</Text>
+              <Text style={styles.infoText}>• Carte bancaire</Text>
             )}
             {practitioner.conventioned && (
-              <Text style={styles.paymentMethod}>Carte vitale</Text>
+              <Text style={styles.infoText}>• Carte vitale</Text>
             )}
             {practitioner.payment_methods.check && (
-              <Text style={styles.paymentMethod}>Chèque</Text>
+              <Text style={styles.infoText}>• Chèque</Text>
             )}
             {practitioner.payment_methods.cash && (
-              <Text style={styles.paymentMethod}>Liquide</Text>
+              <Text style={styles.infoText}>• Liquide</Text>
             )}
           </View>
-        </View>
 
-        {/* Available Appointments Section */}
-        <View style={styles.section}>
-          <Text style={styles.appointmentTitle}>Planning des rendez-vous</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.slotsContainer}
-          >
-            {availableSlots.map((slot, index) => (
-              <TouchableOpacity
-                key={slot.date}
-                style={[
-                  styles.slotCard,
-                  index === 0 && styles.firstSlot,
-                  !slot.available && styles.unavailableSlot
-                ]}
-                onPress={() => handleBookAppointment(slot)}
-                disabled={!slot.available}
-              >
-                <Text style={[
-                  styles.slotDay,
-                  index === 0 && styles.selectedSlotText,
-                  !slot.available && styles.unavailableSlotText
-                ]}>
-                  {slot.dayName}
+          {/* Appointment Section */}
+          <View style={styles.appointmentCard}>
+            <Text style={styles.cardTitle}>Planning des rendez-vous</Text>
+            
+            {/* Date Selection */}
+            <View style={styles.dateContainer}>
+              {availableSlots.map((slot, index) => (
+                <TouchableOpacity
+                  key={slot.date}
+                  style={[
+                    styles.dateSlot,
+                    selectedSlot === index && styles.selectedDateSlot,
+                    !slot.available && styles.unavailableDateSlot
+                  ]}
+                  onPress={() => slot.available && setSelectedSlot(index)}
+                  disabled={!slot.available}
+                >
+                  <Text style={[
+                    styles.dayText,
+                    selectedSlot === index && styles.selectedDateText,
+                    !slot.available && styles.unavailableText
+                  ]}>
+                    {slot.dayName}
+                  </Text>
+                  <Text style={[
+                    styles.dateNumber,
+                    selectedSlot === index && styles.selectedDateText,
+                    !slot.available && styles.unavailableText
+                  ]}>
+                    {slot.dayNumber}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Time Slots */}
+            {availableSlots[selectedSlot]?.available && (
+              <>
+                <Text style={styles.timeSlotsTitle}>Créneaux disponibles</Text>
+                <View style={styles.timeSlotContainer}>
+                  {timeSlots.map((slot) => (
+                    <TouchableOpacity
+                      key={slot.time}
+                      style={[
+                        styles.timeSlot,
+                        selectedTime === slot.time && styles.selectedTimeSlot,
+                        !slot.available && styles.unavailableTimeSlot
+                      ]}
+                      onPress={() => slot.available && setSelectedTime(slot.time)}
+                      disabled={!slot.available}
+                    >
+                      <Text style={[
+                        styles.timeText,
+                        selectedTime === slot.time && styles.selectedTimeText,
+                        !slot.available && styles.unavailableTimeText
+                      ]}>
+                        {slot.time}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Book Button */}
+                <TouchableOpacity 
+                  style={[styles.bookButton, !selectedTime && styles.bookButtonDisabled]}
+                  onPress={handleBookAppointment}
+                  disabled={!selectedTime}
+                >
+                  <Text style={styles.bookButtonText}>
+                    {selectedTime ? 'Confirmer le rendez-vous' : 'Sélectionnez un créneau'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {!availableSlots[selectedSlot]?.available && (
+              <View style={styles.unavailableMessage}>
+                <Text style={styles.unavailableMessageText}>
+                  Aucun créneau disponible ce jour
                 </Text>
-                <Text style={[
-                  styles.slotNumber,
-                  index === 0 && styles.selectedSlotText,
-                  !slot.available && styles.unavailableSlotText
-                ]}>
-                  {slot.dayNumber}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          
-          <Text style={styles.availabilityTitle}>Créneaux disponibles</Text>
-          <View style={styles.availabilityNote}>
-            <Text style={styles.availabilityText}>
-              Sélectionnez une date pour voir les créneaux disponibles
-            </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation - Cohérent avec vos tabs */}
+      {/* Bottom Navigation */}
       <View style={styles.bottomNavigation}>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigateToTab('index')}
         >
-          <Calendar color="#B0B0B0" size={24} />
+          <Calendar size={24} color="#666" />
           <Text style={styles.navText}>RDV</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigateToTab('practitioners')}
         >
-          <Hospital color="#5671DA" size={24} />
-          <Text style={[styles.navText, styles.activeNavText]}>Praticiens</Text>
+          <Hospital size={24} color="#2E4FD1" />
+          <Text style={[styles.navText, styles.activeNavText]}>PRATICIENS</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={styles.navItem}
           onPress={() => navigateToTab('profil')}
         >
-          <User color="#B0B0B0" size={24} />
-          <Text style={styles.navText}>Profil</Text>
+          <User size={24} color="#666" />
+          <Text style={styles.navText}>PROFIL</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -343,11 +415,11 @@ export default function PractitionerDetailScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
   },
   loadingContainer: {
     flex: 1,
@@ -365,170 +437,288 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  headerContainer: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
+  
+  // Header Section
+  headerSection: {
+    height: 200,
     position: 'relative',
   },
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  profileOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  profileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   practitionerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   onlineIndicator: {
     position: 'absolute',
-    top: 24 + 70,
-    left: '50%',
-    marginLeft: 25,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#4CAF50',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#fff',
   },
+  profileText: {
+    marginLeft: 16,
+    flex: 1,
+  },
   practitionerName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    color: '#222',
-    textAlign: 'center',
-    marginBottom: 4,
+    color: '#000',
   },
   specialty: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  section: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#222',
-    marginLeft: 8,
-  },
-  address: {
-    fontSize: 15,
-    color: '#333',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  addressDetail: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 2,
+    marginTop: 2,
+  },
+
+  // Content
+  contentContainer: {
+    padding: 16,
+  },
+  
+  // Cards
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 12,
+  },
+  
+  // Address Card
+  addressContent: {
+    position: 'relative',
+  },
+  addressText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+  addressSubText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  transportSection: {
+    marginTop: 12,
+  },
+  transportLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+    marginBottom: 4,
   },
   transportText: {
     fontSize: 14,
     color: '#333',
+    lineHeight: 20,
   },
-  tariffItem: {
-    marginBottom: 8,
+  mapButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tariffText: {
+  
+  // Info Text
+  infoText: {
     fontSize: 14,
     color: '#333',
-    lineHeight: 18,
-  },
-  paymentMethods: {
-    flexDirection: 'column',
-  },
-  paymentMethod: {
-    fontSize: 14,
-    color: '#333',
+    lineHeight: 22,
     marginBottom: 4,
   },
-  appointmentTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#222',
-    marginBottom: 16,
+  
+  // Appointment Card
+  appointmentCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  slotsContainer: {
+  
+  // Date Selection
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
   },
-  slotCard: {
-    backgroundColor: '#F8F9FA',
+  dateSlot: {
+    backgroundColor: '#fff',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    marginRight: 12,
-    minWidth: 60,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E0E0E0',
+    minWidth: 60,
   },
-  firstSlot: {
+  selectedDateSlot: {
     backgroundColor: '#2E4FD1',
     borderColor: '#2E4FD1',
   },
-  unavailableSlot: {
-    backgroundColor: '#F0F0F0',
-    opacity: 0.6,
+  unavailableDateSlot: {
+    backgroundColor: '#F8F8F8',
+    opacity: 0.5,
   },
-  slotDay: {
-    fontSize: 14,
+  dayText: {
+    fontSize: 12,
     color: '#666',
     marginBottom: 4,
   },
-  slotNumber: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#222',
-  },
-  selectedSlotText: {
-    color: '#fff',
-  },
-  unavailableSlotText: {
-    color: '#999',
-  },
-  availabilityTitle: {
+  dateNumber: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#222',
-    marginBottom: 8,
+    color: '#000',
   },
-  availabilityNote: {
-    padding: 16,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
+  selectedDateText: {
+    color: '#fff',
   },
-  availabilityText: {
+  unavailableText: {
+    color: '#C0C0C0',
+  },
+  
+  // Time Slots
+  timeSlotsTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 12,
+  },
+  timeSlotContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  timeSlot: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  selectedTimeSlot: {
+    backgroundColor: '#2E4FD1',
+  },
+  unavailableTimeSlot: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.5,
+  },
+  timeText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  selectedTimeText: {
+    color: '#fff',
+  },
+  unavailableTimeText: {
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
+  
+  // Unavailable Message
+  unavailableMessage: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  unavailableMessageText: {
     fontSize: 14,
     color: '#666',
-    textAlign: 'center',
+    fontStyle: 'italic',
   },
+  
+  // Book Button
+  bookButton: {
+    backgroundColor: '#2E4FD1',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  bookButtonDisabled: {
+    backgroundColor: '#C0C0C0',
+  },
+  bookButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+
+  // Bottom Navigation
   bottomNavigation: {
     flexDirection: 'row',
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#E9ECEF',
+    borderTopColor: '#E0E0E0',
     paddingVertical: 8,
-    paddingHorizontal: 16,
   },
   navItem: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   navText: {
-    fontSize: 12,
-    color: '#B0B0B0',
+    fontSize: 11,
+    color: '#666',
     marginTop: 4,
     fontWeight: '500',
   },
   activeNavText: {
-    color: '#5671DA',
+    color: '#2E4FD1',
   },
 });
