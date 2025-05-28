@@ -29,6 +29,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth" options={{ headerShown: false }} />
           <Stack.Screen name="practitioner-signup" options={{ headerTitle: 'S’inscrire comme Praticien' }} />
           <Stack.Screen name="+not-found" />
+          <Stack.Screen name="practitioner-detail" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

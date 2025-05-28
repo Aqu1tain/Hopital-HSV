@@ -21,6 +21,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AppHeader from '../../components/AppHeader';
 import { useAuth } from '../auth-context';
 import config from '../../config/config';
+import { useRouter } from 'expo-router';
 
 interface Practitioner {
   id: string;
@@ -63,6 +64,7 @@ const PAYMENT_FILTERS = [
 
 export default function PraticiensScreen() {
   const { token } = useAuth();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -259,12 +261,19 @@ export default function PraticiensScreen() {
     setFilteredPractitioners(result);
   }, [search, selectedSpecialty, selectedPayment, practitioners]);
 
+  const handlePractitionerPress = (practitioner: Practitioner) => {
+    router.push(`/practitioner-detail?id=${practitioner.id}`);
+  };
+
   const renderItem = ({ item }: { item: Practitioner }) => (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity 
+      style={styles.card}
+      onPress={() => handlePractitionerPress(item)} // Ajout de la navigation
+    >
       <Image
         source={{ uri: item.image || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png' }}
         style={styles.avatar}
-        defaultSource={require('@/assets/images/placeholder-doctor.jpg')}
+        defaultSource={require('../../assets/images/placeholder-doctor.jpg')}
       />
       <View style={styles.info}>
         <Text style={styles.name}>
@@ -288,6 +297,10 @@ export default function PraticiensScreen() {
             </View>
           )}
         </View>
+      </View>
+      {/* Optionnel : flèche pour indiquer que c'est cliquable */}
+      <View style={styles.arrowContainer}>
+        <Ionicons name="chevron-forward" size={20} color="#C7C7C7" />
       </View>
     </TouchableOpacity>
   );
@@ -868,5 +881,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#444',
     fontWeight: '500',
+  },
+  arrowContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 8,
   },
 });
