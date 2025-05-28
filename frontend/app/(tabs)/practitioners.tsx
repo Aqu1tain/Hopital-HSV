@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  Switch,
 } from 'react-native';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -72,30 +73,73 @@ export default function PraticiensScreen() {
   } | null>(null);
   const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
   const [locationInput, setLocationInput] = useState('');
+  const [useLocation, setUseLocation] = useState(true);
 
   const fetchPractitioners = async () => {
-    if (!token || !selectedLocation) return;
+    if (!token) {
+      console.error('No authentication token found');
+      return;
+    }
     
     try {
       setRefreshing(true);
-      const response = await fetch(`${config.API_URL}/api/practitioners`, {
+      
+      // Préparer les données de la requête
+      const requestBody: { location?: { city?: string; postal_code?: string } } = {};
+      let endpoint = `${config.API_URL}/api/practitioners`;
+      
+      // Si la localisation est activée et qu'on a une localisation sélectionnée
+      if (useLocation && selectedLocation) {
+        requestBody.location = {};
+        if (selectedLocation.value.city) requestBody.location.city = selectedLocation.value.city;
+        if (selectedLocation.value.district) requestBody.location.postal_code = selectedLocation.value.district;
+      } else if (useLocation) {
+        // Si la localisation est activée mais qu'on n'a pas encore de localisation
+        console.log('En attente de la localisation...');
+        return;
+      } else {
+        // Si la localisation est désactivée, on utilise un endpoint différent
+        endpoint = `${config.API_URL}/api/practitioners/all`;
+      }
+      
+      console.log('Fetching practitioners from:', endpoint);
+      console.log('Request body:', requestBody);
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          location: selectedLocation.value
-        })
+        body: Object.keys(requestBody).length > 0 ? JSON.stringify(requestBody) : undefined,
       });
+
+      // Vérifier d'abord le type de contenu de la réponse
+      const contentType = response.headers.get('content-type');
+      let responseData;
       
-      if (!response.ok) throw new Error('Échec de la récupération des praticiens');
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Réponse non-JSON reçue:', text);
+        throw new Error(`Réponse inattendue du serveur: ${text.substring(0, 100)}...`);
+      }
       
-      const data = await response.json();
-      setPractitioners(data);
-      setFilteredPractitioners(data);
+      if (!response.ok) {
+        console.error('Erreur du serveur:', response.status, responseData);
+        throw new Error(responseData.message || `Erreur ${response.status}: ${response.statusText}`);
+      }
+      
+      console.log('Données reçues:', responseData);
+      setPractitioners(responseData);
+      setFilteredPractitioners(responseData);
     } catch (error) {
-      console.error('Erreur lors de la récupération des praticiens:', error);
+      console.error('Erreur dans fetchPractitioners:', error);
+      Alert.alert(
+        'Erreur', 
+        `Impossible de charger les praticiens: ${error instanceof Error ? error.message : 'Erreur inconnue'}`
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -116,24 +160,30 @@ export default function PraticiensScreen() {
         }
 
         const location = await Location.getCurrentPositionAsync({});
-        const address = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-
+        const address = await Location.reverseGeocodeAsync(location.coords);
+        console.log('Adresse complète:', address); // Debug log
+        
+        // Extraire la ville et le code postal
         const city = address[0]?.city || 'Paris';
-        const district = address[0]?.postalCode?.substring(0, 2) === '75' ? 
-          address[0]?.postalCode.substring(2) : '6';
+        // Utiliser le code postal complet au lieu de juste le dernier chiffre
+        const postalCode = address[0]?.postalCode || '75000';
+        const district = postalCode.startsWith('75') ? postalCode : `${postalCode}`;
 
         setSelectedLocation({ 
-          name: `${city} ${district}`, 
-          value: { city, district }
+          name: `${city} ${postalCode}`, 
+          value: { 
+            city, 
+            district: postalCode // Envoyer le code postal complet
+          }
         });
       } catch (error) {
         console.error('Erreur de géolocalisation:', error);
         setSelectedLocation({ 
-          name: 'Paris 6', 
-          value: { city: 'Paris', district: '75006' }
+          name: 'Paris 75006', 
+          value: { 
+            city: 'Paris', 
+            district: '75006' 
+          }
         });
       }
     })();
@@ -331,19 +381,32 @@ export default function PraticiensScreen() {
           />
         </View>
 
-        {/* Location */}
-        <View style={styles.zone}>
-          <Text style={styles.zoneLabel}>Praticiens à proximité</Text>
-          <View style={styles.zoneInfo}>
-            <Text style={styles.zoneText} numberOfLines={1}>
-              {selectedLocation?.name || 'Chargement...'}
-            </Text>
-            <TouchableOpacity onPress={handleLocationSelect} style={{ padding: 8 }}>
-              <Text style={styles.zoneChange}>Changer</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Location Toggle */}
+        <View style={styles.locationToggleContainer}>
+          <Text style={styles.locationToggleLabel}>Recherche par localisation</Text>
+          <Switch
+            value={useLocation}
+            onValueChange={setUseLocation}
+            trackColor={{ false: '#767577', true: '#81b0ff' }}
+            thumbColor={useLocation ? '#2E4FD1' : '#f4f3f4'}
+          />
         </View>
 
+        {/* Location */}
+        {useLocation && (
+          <View style={styles.zone}>
+            <Text style={styles.zoneLabel}>Praticiens {selectedLocation?.name ? `à ${selectedLocation.name}` : 'proches'}</Text>
+            <View style={styles.zoneInfo}>
+              <Text style={styles.zoneText} numberOfLines={1}>
+                {selectedLocation?.name || 'Chargement...'}
+              </Text>
+              <TouchableOpacity onPress={handleLocationSelect} style={{ padding: 8 }}>
+                <Text style={styles.zoneChange}>Changer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        
         {/* Practitioners List */}
         {filteredPractitioners.length > 0 ? (
           <FlatList
@@ -654,6 +717,26 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: 'white',
+    fontWeight: '500',
+  },
+  locationToggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  locationToggleLabel: {
+    fontSize: 14,
+    color: '#444',
     fontWeight: '500',
   },
 });

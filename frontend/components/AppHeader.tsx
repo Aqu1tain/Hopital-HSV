@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16, // for safe area
+    paddingTop: 26, // for safe area
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: '#fff',
