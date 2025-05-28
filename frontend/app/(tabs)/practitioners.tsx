@@ -14,6 +14,7 @@ import {
   Alert,
   Modal,
   Switch,
+  Animated,
 } from 'react-native';
 import * as Location from 'expo-location';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -77,6 +78,11 @@ export default function PraticiensScreen() {
   const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
   const [locationInput, setLocationInput] = useState('');
   const [useLocation, setUseLocation] = useState(true);
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [activeFiltersCount, setActiveFiltersCount] = useState(0);
+
+  // Animation for filter expansion
+  const filterAnimation = useState(new Animated.Value(1))[0];
 
   // Nouvelle version fetch pour permettre le refresh dans tous les cas
   const fetchPractitioners = async (options?: { forceNoLocation?: boolean }) => {
@@ -111,7 +117,6 @@ export default function PraticiensScreen() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        // Surtout pas de body !
       });
   
       const contentType = response.headers.get('content-type');
@@ -143,7 +148,33 @@ export default function PraticiensScreen() {
       setRefreshing(false);
     }
   };
-  
+
+  // Count active filters
+  useEffect(() => {
+    let count = 0;
+    if (selectedSpecialty !== 'all') count++;
+    if (selectedPayment !== 'all') count++;
+    if (search.length > 0) count++;
+    setActiveFiltersCount(count);
+  }, [selectedSpecialty, selectedPayment, search]);
+
+  // Toggle filters animation
+  const toggleFilters = () => {
+    const toValue = filtersExpanded ? 0 : 1;
+    setFiltersExpanded(!filtersExpanded);
+    Animated.timing(filterAnimation, {
+      toValue,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearch('');
+    setSelectedSpecialty('all');
+    setSelectedPayment('all');
+  };
 
   // Rafraîchir la liste quand on active/désactive la localisation
   useEffect(() => {
@@ -306,90 +337,136 @@ export default function PraticiensScreen() {
     <SafeAreaView style={styles.safe}>
       <AppHeader />
       <View style={styles.content}>
+        {/* Enhanced Search Container */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" />
-          <TextInput
-            style={[styles.searchInput, { borderColor: focused ? '#2E4FD1' : '#C7C7C7' }]}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="Rechercher un médecin, un praticien"
-            value={search}
-            onChangeText={setSearch}
-            placeholderTextColor="#7B7B7B"
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={20} color="#666" />
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#666" />
+            <TextInput
+              style={[styles.searchInput, { borderColor: focused ? '#2E4FD1' : 'transparent' }]}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder="Rechercher un médecin, un praticien"
+              value={search}
+              onChangeText={setSearch}
+              placeholderTextColor="#7B7B7B"
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Filter Toggle Button */}
+          <TouchableOpacity 
+            style={[styles.filterToggleBtn, activeFiltersCount > 0 && styles.filterToggleBtnActive]}
+            onPress={toggleFilters}
+          >
+            <Ionicons 
+              name={filtersExpanded ? "options" : "options-outline"} 
+              size={20} 
+              color={activeFiltersCount > 0 ? "#fff" : "#2E4FD1"} 
+            />
+            {activeFiltersCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Results Summary */}
+        <View style={styles.resultsSummary}>
+          <Text style={styles.resultsText}>
+            {filteredPractitioners.length} praticien{filteredPractitioners.length > 1 ? 's' : ''} trouvé{filteredPractitioners.length > 1 ? 's' : ''}
+          </Text>
+          {activeFiltersCount > 0 && (
+            <TouchableOpacity onPress={clearAllFilters} style={styles.clearAllBtn}>
+              <Text style={styles.clearAllText}>Effacer les filtres</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Specialty Filters */}
-        <View style={styles.filtersContainer}>
-          <Text style={styles.filterLabel}>Spécialité :</Text>
-          <FlatList
-            horizontal
-            data={FILTERS}
-            keyExtractor={item => item.key}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  selectedSpecialty === item.key && styles.filterBtnActive
-                ]}
-                onPress={() => setSelectedSpecialty(item.key)}
-              >
-                <Text style={[
-                  styles.filterText,
-                  selectedSpecialty === item.key && styles.filterTextActive
-                ]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList}
-          />
-        </View>
+        {/* Collapsible Filters */}
+        <Animated.View 
+          style={[
+            styles.filtersWrapper,
+            {
+              maxHeight: filterAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 300],
+              }),
+              opacity: filterAnimation,
+            }
+          ]}
+        >
+          {/* Specialty Filters */}
+          <View style={styles.filtersContainer}>
+            <Text style={styles.filterLabel}>Spécialité</Text>
+            <FlatList
+              horizontal
+              data={FILTERS}
+              keyExtractor={item => item.key}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.filterBtn,
+                    selectedSpecialty === item.key && styles.filterBtnActive
+                  ]}
+                  onPress={() => setSelectedSpecialty(item.key)}
+                >
+                  <Text style={[
+                    styles.filterText,
+                    selectedSpecialty === item.key && styles.filterTextActive
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersList}
+            />
+          </View>
 
-        {/* Payment Filters */}
-        <View style={styles.filtersContainer}>
-          <Text style={styles.filterLabel}>Paiement :</Text>
-          <FlatList
-            horizontal
-            data={PAYMENT_FILTERS}
-            keyExtractor={item => item.key}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.filterBtn,
-                  selectedPayment === item.key && styles.filterBtnActive
-                ]}
-                onPress={() => setSelectedPayment(item.key)}
-              >
-                <Text style={[
-                  styles.filterText,
-                  selectedPayment === item.key && styles.filterTextActive
-                ]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersList}
-          />
-        </View>
+          {/* Payment Filters */}
+          <View style={styles.filtersContainer}>
+            <Text style={styles.filterLabel}>Paiement</Text>
+            <FlatList
+              horizontal
+              data={PAYMENT_FILTERS}
+              keyExtractor={item => item.key}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.filterBtn,
+                    selectedPayment === item.key && styles.filterBtnActive
+                  ]}
+                  onPress={() => setSelectedPayment(item.key)}
+                >
+                  <Text style={[
+                    styles.filterText,
+                    selectedPayment === item.key && styles.filterTextActive
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersList}
+            />
+          </View>
 
-        {/* Location Toggle */}
-        <View style={styles.locationToggleContainer}>
-          <Text style={styles.locationToggleLabel}>Recherche par localisation</Text>
-          <Switch
-            value={useLocation}
-            onValueChange={setUseLocation}
-            trackColor={{ false: '#767577', true: '#81b0ff' }}
-            thumbColor={useLocation ? '#2E4FD1' : '#f4f3f4'}
-          />
-        </View>
+          {/* Location Toggle */}
+          <View style={styles.locationToggleContainer}>
+            <Text style={styles.locationToggleLabel}>Recherche par localisation</Text>
+            <Switch
+              value={useLocation}
+              onValueChange={setUseLocation}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={useLocation ? '#2E4FD1' : '#f4f3f4'}
+            />
+          </View>
+        </Animated.View>
 
         {/* Location */}
         {useLocation && (
@@ -399,7 +476,7 @@ export default function PraticiensScreen() {
               <Text style={styles.zoneText} numberOfLines={1}>
                 {selectedLocation?.name || 'Chargement...'}
               </Text>
-              <TouchableOpacity onPress={handleLocationSelect} style={{ padding: 8 }}>
+              <TouchableOpacity onPress={handleLocationSelect} style={styles.changeLocationBtn}>
                 <Text style={styles.zoneChange}>Changer</Text>
               </TouchableOpacity>
             </View>
@@ -427,15 +504,6 @@ export default function PraticiensScreen() {
                 tintColor="#2E4FD1"
               />
             }
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={48} color="#C7C7C7" />
-                <Text style={styles.emptyText}>Aucun praticien trouvé</Text>
-                <Text style={styles.emptySubtext}>
-                  Essayez de modifier vos critères de recherche
-                </Text>
-              </View>
-            }
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -447,6 +515,7 @@ export default function PraticiensScreen() {
           </View>
         )}
       </View>
+      
       <Modal
         animationType="slide"
         transparent={true}
@@ -504,19 +573,20 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
     padding: 12,
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#C7C7C7',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   searchInput: {
     flex: 1,
@@ -524,13 +594,72 @@ const styles = StyleSheet.create({
     color: '#333',
     padding: 0,
   },
+  clearButton: {
+    padding: 4,
+  },
+  filterToggleBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#2E4FD1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  filterToggleBtnActive: {
+    backgroundColor: '#2E4FD1',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF4757',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  resultsSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  resultsText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  clearAllBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  clearAllText: {
+    color: '#2E4FD1',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filtersWrapper: {
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
   filtersContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   filterLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#444',
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -538,13 +667,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   filterBtn: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    borderRadius: 24,
+    backgroundColor: '#F8F9FA',
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#E9ECEF',
     marginRight: 8,
+    minHeight: 40,
+    justifyContent: 'center',
   },
   filterBtnActive: {
     backgroundColor: '#2E4FD1',
@@ -553,10 +684,11 @@ const styles = StyleSheet.create({
   filterText: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '500',
   },
   filterTextActive: {
     color: '#fff',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   zone: {
     marginBottom: 16,
@@ -576,6 +708,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginRight: 8,
+  },
+  changeLocationBtn: {
+    padding: 8,
   },
   zoneChange: {
     color: '#2E4FD1',
@@ -725,16 +860,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginBottom: 8,
   },
   locationToggleLabel: {
     fontSize: 14,
