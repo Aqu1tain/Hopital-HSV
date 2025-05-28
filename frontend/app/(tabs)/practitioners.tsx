@@ -602,8 +602,6 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#2E4FD1',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
