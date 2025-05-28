@@ -312,7 +312,7 @@ export default function PractitionerDetailScreen() {
       <View style={styles.bottomNavigation}>
         <TouchableOpacity 
           style={styles.navItem}
-          onPress={() => navigateToTab('index')}
+          onPress={() => navigateToTab('practitioners')}
         >
           <Calendar color="#B0B0B0" size={24} />
           <Text style={styles.navText}>RDV</Text>
