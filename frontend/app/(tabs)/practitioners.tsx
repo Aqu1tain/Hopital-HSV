@@ -45,10 +45,13 @@ interface LocationType {
 
 const FILTERS = [
   { key: 'all', label: 'Toutes les spécialités' },
-  { key: 'general', label: 'Médecine générale' },
-  { key: 'pediatric', label: 'Pédiatrie' },
-  { key: 'cardiology', label: 'Cardiologie' },
-  { key: 'osteopathy', label: 'Ostéopathie' },
+  { key: 'Médecin Généraliste', label: 'Médecine générale' },
+  { key: 'Pediatre', label: 'Pédiatrie' },
+  { key: 'Cardiologue', label: 'Cardiologie' },
+  { key: 'Ostéopathe D.O.', label: 'Ostéopathie' },
+  { key: 'Kinésithérapeute', label: 'Kinésithérapie' },
+  { key: 'Chirurgien-Dentiste', label: 'Chirurgie dentaire' },
+  { key: 'Ophtalmologue', label: 'Ophtalmologie' },
 ];
 
 const PAYMENT_FILTERS = [
@@ -497,7 +500,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
   },
   searchContainer: {
     flexDirection: 'row',
