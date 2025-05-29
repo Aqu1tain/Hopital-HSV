@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Button, TouchableOpacity, GestureResponderEvent, Image } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import AppHeader from '../../components/AppHeader';
-import Splash from '../Splash';
+import Splash from '..';
 
 type Props = {
   title: string;
