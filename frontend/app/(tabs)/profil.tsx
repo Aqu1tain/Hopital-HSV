@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import AppHeader from '../../components/AppHeader';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from 'expo-router';
 import { useAuth } from '../auth-context';
 import { useRouter } from 'expo-router';
@@ -80,39 +80,280 @@ const Texte: React.FC<TextProps> = ({ textView, textSecondaryView, onChangeText,
 };
 
 export default function ProfilScreen() {
-  const { logout } = useAuth();
+  const { logout, token } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [isEditingSocialSecurity, setIsEditingSocialSecurity] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   
+  const [userData, setUserData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    profile_url: '',
+  });
+  
   const [personalData, setPersonalData] = useState({
-    dateOfBirth: '10 mars 2005',
-    weight: '83',
-    allergies: 'Pollen, poussière, bouleau, poils de chat',
-    medicalHistory: 'Fracture avant bras gauche',
-    gender: 'Homme',
+    dateOfBirth: '',
+    weight: '',
+    allergies: '',
+    medicalHistory: '',
+    gender: '',
   });
   
   const [contactData, setContactData] = useState({
-    phone: '06 12 34 56 78',
-    email: 'valentin.lamouche@mail.com',
+    phone: '',
+    email: '',
   });
   
   const [socialSecurityData, setSocialSecurityData] = useState({
-    socialSecurityNumber: '1 05 05 75 123 456 78',
-    healthInsuranceFund: 'CPAM Paris',
-    mutualInsurance: 'MutuelleSanté+',
+    socialSecurityNumber: '',
+    healthInsuranceFund: '',
+    mutualInsurance: '',
   });
   
   const [addressData, setAddressData] = useState({
-    street: '12 Rue des Lilas',
-    postalCode: '75001',
-    city: 'Paris',
+    street: '',
+    postalCode: '',
+    city: '',
   });
+
+  const fetchUserData = async () => {
+    if (!token) return;
+    
+    try {
+      setDataLoading(true);
+      const response = await fetch(`${config.API_URL}/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user data');
+      }
+
+      const data = await response.json();
+      
+      // Set basic user data
+      setUserData({
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        profile_url: data.profile_url || '',
+      });
+
+      // Set contact data
+      setContactData({
+        phone: data.phone || '',
+        email: data.email || '',
+      });
+
+      // If user is a patient, set their profile data
+      if (data.role === 'patient' && data.profile) {
+        const profile = data.profile;
+        
+        // Format birth date
+        const birthDate = profile.birth_date ? new Date(profile.birth_date) : null;
+        const formattedBirthDate = birthDate ? birthDate.toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        }) : '';
+
+        setPersonalData({
+          dateOfBirth: formattedBirthDate,
+          weight: profile.weight_kg ? profile.weight_kg.toString() : '',
+          allergies: profile.allergies ? profile.allergies.join(', ') : '',
+          medicalHistory: profile.medical_history || '',
+          gender: profile.gender === 'M' ? 'Homme' : profile.gender === 'F' ? 'Femme' : profile.gender || '',
+        });
+
+        setSocialSecurityData({
+          socialSecurityNumber: profile.social_security_number || '',
+          healthInsuranceFund: profile.health_insurance || '',
+          mutualInsurance: profile.coverage_mutuelle || '',
+        });
+
+        setAddressData({
+          street: profile.street_address || '',
+          postalCode: profile.postal_code || '',
+          city: profile.city || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, [token]);
+
+  const updatePersonalData = async () => {
+    try {
+      setLoading(true);
+      const genderMap: { [key: string]: string } = {
+        'Homme': 'M',
+        'Femme': 'F',
+        'Autre': 'Other'
+      };
+      
+      const updateData = {
+        weight_kg: personalData.weight ? parseFloat(personalData.weight) : null,
+        allergies: personalData.allergies ? personalData.allergies.split(',').map(a => a.trim()) : [],
+        medical_history: personalData.medicalHistory,
+        gender: genderMap[personalData.gender] || personalData.gender,
+      };
+
+      const response = await fetch(`${config.API_URL}/api/patients/update`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update personal data');
+      }
+
+      setIsEditingPersonal(false);
+    } catch (error) {
+      console.error('Error updating personal data:', error);
+      alert('Erreur lors de la mise à jour des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateContactData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${config.API_URL}/api/users/update`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: contactData.phone,
+          email: contactData.email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update contact data');
+      }
+
+      setIsEditingContact(false);
+    } catch (error) {
+      console.error('Error updating contact data:', error);
+      alert('Erreur lors de la mise à jour des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateSocialSecurityData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${config.API_URL}/api/patients/update`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          social_security_number: socialSecurityData.socialSecurityNumber,
+          health_insurance: socialSecurityData.healthInsuranceFund,
+          coverage_mutuelle: socialSecurityData.mutualInsurance,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update social security data');
+      }
+
+      setIsEditingSocialSecurity(false);
+    } catch (error) {
+      console.error('Error updating social security data:', error);
+      alert('Erreur lors de la mise à jour des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateAddressData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${config.API_URL}/api/patients/update`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          street_address: addressData.street,
+          postal_code: addressData.postalCode,
+          city: addressData.city,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update address data');
+      }
+
+      setIsEditingAddress(false);
+    } catch (error) {
+      console.error('Error updating address data:', error);
+      alert('Erreur lors de la mise à jour des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditPersonalToggle = () => {
+    if (isEditingPersonal) {
+      updatePersonalData();
+    } else {
+      setIsEditingPersonal(true);
+    }
+  };
+
+  const handleEditContactToggle = () => {
+    if (isEditingContact) {
+      updateContactData();
+    } else {
+      setIsEditingContact(true);
+    }
+  };
+
+  const handleEditSocialSecurityToggle = () => {
+    if (isEditingSocialSecurity) {
+      updateSocialSecurityData();
+    } else {
+      setIsEditingSocialSecurity(true);
+    }
+  };
+
+  const handleEditAddressToggle = () => {
+    if (isEditingAddress) {
+      updateAddressData();
+    } else {
+      setIsEditingAddress(true);
+    }
+  };
 
   const handleLogout = async () => {
     setLoading(true);
@@ -124,22 +365,6 @@ export default function ProfilScreen() {
     setLoading(false);
   };
 
-  const handleEditPersonalToggle = () => {
-    setIsEditingPersonal(!isEditingPersonal);
-  };
-
-  const handleEditContactToggle = () => {
-    setIsEditingContact(!isEditingContact);
-  };
-
-  const handleEditSocialSecurityToggle = () => {
-    setIsEditingSocialSecurity(!isEditingSocialSecurity);
-  };
-
-  const handleEditAddressToggle = () => {
-    setIsEditingAddress(!isEditingAddress);
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <AppHeader />
@@ -147,175 +372,204 @@ export default function ProfilScreen() {
         <Bandeau />
         <View style={styles.imageWrapper}>
           <Image
-            source={require('@/assets/images/pdp.png')}
+            source={
+              userData.profile_url && userData.profile_url !== 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png'
+                ? { uri: userData.profile_url }
+                : require('@/assets/images/pdp.png')
+            }
             style={styles.image}
           />
-          <Text style={styles.pseudo}>Valentin LAMOUCHE</Text>
+          <Text style={styles.pseudo}>
+            {dataLoading ? 'Chargement...' : `${userData.first_name} ${userData.last_name}`}
+          </Text>
         </View>
-        <View style={styles.container}>
-          <View style={styles.section}>
-            <View style={styles.headerContainer}>
-              <Text style={styles.titre}>Informations personnelles</Text>
-              {!isEditingPersonal && (
+        
+        {dataLoading ? (
+          <View style={styles.container}>
+            <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 50 }} />
+          </View>
+        ) : (
+          <View style={styles.container}>
+            <View style={styles.section}>
+              <View style={styles.headerContainer}>
+                <Text style={styles.titre}>Informations personnelles</Text>
+                {!isEditingPersonal && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={handleEditPersonalToggle}
+                    disabled={loading}
+                  >
+                    <Text style={styles.penIcon}>✎</Text>
+                    <Text style={styles.editText}>Modifier</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {[
+                { textView: 'Date de Naissance : ', value: personalData.dateOfBirth, onChange: (text: string) => setPersonalData({ ...personalData, dateOfBirth: text }) },
+                { textView: 'Poids : ', value: personalData.weight, onChange: (text: string) => setPersonalData({ ...personalData, weight: text }) },
+                { textView: 'Allergies : ', value: personalData.allergies, onChange: (text: string) => setPersonalData({ ...personalData, allergies: text }) },
+                { textView: 'Antécédents médicaux : ', value: personalData.medicalHistory, onChange: (text: string) => setPersonalData({ ...personalData, medicalHistory: text }) },
+                { textView: 'Sexe : ', value: personalData.gender, onChange: (text: string) => setPersonalData({ ...personalData, gender: text }) },
+              ].map((item, index) => (
+                <Texte
+                  key={index}
+                  textView={item.textView}
+                  textSecondaryView={item.value}
+                  isEditing={isEditingPersonal}
+                  onChangeText={item.onChange}
+                />
+              ))}
+              {isEditingPersonal && (
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={handleEditPersonalToggle}
+                  disabled={loading}
                 >
                   <Text style={styles.penIcon}>✎</Text>
-                  <Text style={styles.editText}>Modifier</Text>
+                  <Text style={[styles.editText, styles.editTextActive]}>
+                    {loading ? 'Enregistrement...' : 'Enregistrer'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
-            {[
-              { textView: 'Date de Naissance : ', value: personalData.dateOfBirth, onChange: (text: string) => setPersonalData({ ...personalData, dateOfBirth: text }) },
-              { textView: 'Poids : ', value: personalData.weight, onChange: (text: string) => setPersonalData({ ...personalData, weight: text }) },
-              { textView: 'Allergies : ', value: personalData.allergies, onChange: (text: string) => setPersonalData({ ...personalData, allergies: text }) },
-              { textView: 'Antécédents médicaux : ', value: personalData.medicalHistory, onChange: (text: string) => setPersonalData({ ...personalData, medicalHistory: text }) },
-              { textView: 'Sexe : ', value: personalData.gender, onChange: (text: string) => setPersonalData({ ...personalData, gender: text }) },
-            ].map((item, index) => (
-              <Texte
-                key={index}
-                textView={item.textView}
-                textSecondaryView={item.value}
-                isEditing={isEditingPersonal}
-                onChangeText={item.onChange}
-              />
-            ))}
-            {isEditingPersonal && (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={handleEditPersonalToggle}
-              >
-                <Text style={styles.penIcon}>✎</Text>
-                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.sectionSeparator} />
-          <View style={styles.section}>
-            <View style={styles.headerContainer}>
-              <Text style={styles.titre}>Informations de Contact</Text>
-              {!isEditingContact && (
+            <View style={styles.sectionSeparator} />
+            <View style={styles.section}>
+              <View style={styles.headerContainer}>
+                <Text style={styles.titre}>Informations de Contact</Text>
+                {!isEditingContact && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={handleEditContactToggle}
+                    disabled={loading}
+                  >
+                    <Text style={styles.penIcon}>✎</Text>
+                    <Text style={styles.editText}>Modifier</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {[
+                { textView: 'Téléphone : ', value: contactData.phone, onChange: (text: string) => setContactData({ ...contactData, phone: text }) },
+                { textView: 'Mail : ', value: contactData.email, onChange: (text: string) => setContactData({ ...contactData, email: text }) },
+              ].map((item, index) => (
+                <Texte
+                  key={index}
+                  textView={item.textView}
+                  textSecondaryView={item.value}
+                  isEditing={isEditingContact}
+                  onChangeText={item.onChange}
+                />
+              ))}
+              {isEditingContact && (
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={handleEditContactToggle}
+                  disabled={loading}
                 >
                   <Text style={styles.penIcon}>✎</Text>
-                  <Text style={styles.editText}>Modifier</Text>
+                  <Text style={[styles.editText, styles.editTextActive]}>
+                    {loading ? 'Enregistrement...' : 'Enregistrer'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
-            {[
-              { textView: 'Téléphone : ', value: contactData.phone, onChange: (text: string) => setContactData({ ...contactData, phone: text }) },
-              { textView: 'Mail : ', value: contactData.email, onChange: (text: string) => setContactData({ ...contactData, email: text }) },
-            ].map((item, index) => (
-              <Texte
-                key={index}
-                textView={item.textView}
-                textSecondaryView={item.value}
-                isEditing={isEditingContact}
-                onChangeText={item.onChange}
-              />
-            ))}
-            {isEditingContact && (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={handleEditContactToggle}
-              >
-                <Text style={styles.penIcon}>✎</Text>
-                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.sectionSeparator} />
-          <View style={styles.section}>
-            <View style={styles.headerContainer}>
-              <Text style={styles.titre}>Sécurité Sociale</Text>
-              {!isEditingSocialSecurity && (
+            <View style={styles.sectionSeparator} />
+            <View style={styles.section}>
+              <View style={styles.headerContainer}>
+                <Text style={styles.titre}>Sécurité Sociale</Text>
+                {!isEditingSocialSecurity && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={handleEditSocialSecurityToggle}
+                    disabled={loading}
+                  >
+                    <Text style={styles.penIcon}>✎</Text>
+                    <Text style={styles.editText}>Modifier</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {[
+                { textView: 'Numéro de sécurité sociale : ', value: socialSecurityData.socialSecurityNumber, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, socialSecurityNumber: text }) },
+                { textView: 'Caisse d\'assurance maladie : ', value: socialSecurityData.healthInsuranceFund, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, healthInsuranceFund: text }) },
+                { textView: 'Mutuelle : ', value: socialSecurityData.mutualInsurance, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, mutualInsurance: text }) },
+              ].map((item, index) => (
+                <Texte
+                  key={index}
+                  textView={item.textView}
+                  textSecondaryView={item.value}
+                  isEditing={isEditingSocialSecurity}
+                  onChangeText={item.onChange}
+                />
+              ))}
+              {isEditingSocialSecurity && (
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={handleEditSocialSecurityToggle}
+                  disabled={loading}
                 >
                   <Text style={styles.penIcon}>✎</Text>
-                  <Text style={styles.editText}>Modifier</Text>
+                  <Text style={[styles.editText, styles.editTextActive]}>
+                    {loading ? 'Enregistrement...' : 'Enregistrer'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
-            {[
-              { textView: 'Numéro de sécurité sociale : ', value: socialSecurityData.socialSecurityNumber, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, socialSecurityNumber: text }) },
-              { textView: 'Caisse d\'assurance maladie : ', value: socialSecurityData.healthInsuranceFund, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, healthInsuranceFund: text }) },
-              { textView: 'Mutuelle : ', value: socialSecurityData.mutualInsurance, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, mutualInsurance: text }) },
-            ].map((item, index) => (
-              <Texte
-                key={index}
-                textView={item.textView}
-                textSecondaryView={item.value}
-                isEditing={isEditingSocialSecurity}
-                onChangeText={item.onChange}
-              />
-            ))}
-            {isEditingSocialSecurity && (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={handleEditSocialSecurityToggle}
-              >
-                <Text style={styles.penIcon}>✎</Text>
-                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.sectionSeparator} />
-          <View style={styles.section}>
-            <View style={styles.headerContainer}>
-              <Text style={styles.titre}>Adresse</Text>
-              {!isEditingAddress && (
+            <View style={styles.sectionSeparator} />
+            <View style={styles.section}>
+              <View style={styles.headerContainer}>
+                <Text style={styles.titre}>Adresse</Text>
+                {!isEditingAddress && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={handleEditAddressToggle}
+                    disabled={loading}
+                  >
+                    <Text style={styles.penIcon}>✎</Text>
+                    <Text style={styles.editText}>Modifier</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {[
+                { textView: 'Rue : ', value: addressData.street, onChange: (text: string) => setAddressData({ ...addressData, street: text }) },
+                { textView: 'Code postal : ', value: addressData.postalCode, onChange: (text: string) => setAddressData({ ...addressData, postalCode: text }) },
+                { textView: 'Ville : ', value: addressData.city, onChange: (text: string) => setAddressData({ ...addressData, city: text }) },
+              ].map((item, index) => (
+                <Texte
+                  key={index}
+                  textView={item.textView}
+                  textSecondaryView={item.value}
+                  isEditing={isEditingAddress}
+                  onChangeText={item.onChange}
+                />
+              ))}
+              {isEditingAddress && (
                 <TouchableOpacity
                   style={styles.editButton}
                   onPress={handleEditAddressToggle}
+                  disabled={loading}
                 >
                   <Text style={styles.penIcon}>✎</Text>
-                  <Text style={styles.editText}>Modifier</Text>
+                  <Text style={[styles.editText, styles.editTextActive]}>
+                    {loading ? 'Enregistrement...' : 'Enregistrer'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
-            {[
-              { textView: 'Rue : ', value: addressData.street, onChange: (text: string) => setAddressData({ ...addressData, street: text }) },
-              { textView: 'Code postal : ', value: addressData.postalCode, onChange: (text: string) => setAddressData({ ...addressData, postalCode: text }) },
-              { textView: 'Ville : ', value: addressData.city, onChange: (text: string) => setAddressData({ ...addressData, city: text }) },
-            ].map((item, index) => (
-              <Texte
-                key={index}
-                textView={item.textView}
-                textSecondaryView={item.value}
-                isEditing={isEditingAddress}
-                onChangeText={item.onChange}
-              />
-            ))}
-            {isEditingAddress && (
+            
+            {/* Logout section */}
+            <View style={styles.sectionSeparator} />
+            <View style={styles.section}>
               <TouchableOpacity
-                style={styles.editButton}
-                onPress={handleEditAddressToggle}
+                style={styles.logoutButton}
+                onPress={handleLogout}
+                disabled={loading}
               >
-                <Text style={styles.penIcon}>✎</Text>
-                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
+                <Text style={styles.logoutText}>
+                  {loading ? 'Déconnexion...' : 'Se déconnecter'}
+                </Text>
               </TouchableOpacity>
-            )}
+            </View>
           </View>
-          
-          {/* Logout section */}
-          <View style={styles.sectionSeparator} />
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-              disabled={loading}
-            >
-              <Text style={styles.logoutText}>
-                {loading ? 'Déconnexion...' : 'Se déconnecter'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
