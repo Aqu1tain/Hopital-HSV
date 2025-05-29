@@ -542,8 +542,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   settingsIcon: {
-    color: '#FFFFFF',
-    fontSize: 24,
+    tintColor: '#FFFFFF',
+    width: 24,
+    height: 24,
   },
   imageWrapper: {
     alignItems: 'center',
@@ -659,11 +660,6 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     backgroundColor: '#C0C0C0',
-  },
-  settingsIcon: {
-    width: 28,
-    height: 28,
-    tintColor: '#FFFFFF',
   },
   logoutText: {
     color: '#fff',
