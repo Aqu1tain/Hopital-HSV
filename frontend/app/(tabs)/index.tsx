@@ -215,7 +215,7 @@ export default function HomeScreen() {
       } catch (error) {
         Alert.alert(
           'Erreur',
-          error instanceof Error ? error.message : 'Impossible de programmer le rappel',
+          'Impossible de programmer le rappel',
           [{ text: 'OK' }]
         );
       }
