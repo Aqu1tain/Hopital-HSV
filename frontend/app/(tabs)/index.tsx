@@ -14,6 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AppHeader from '../../components/AppHeader';
 import { useAuth } from '../auth-context';
 import config from '../../config/config';
+import { Platform, Linking, Alert } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
 
 interface Appointment {
   id: string;
@@ -178,7 +180,7 @@ export default function HomeScreen() {
           ? `${formatAppointmentDate(appointment.scheduled_at)} – ${address}`
           : `Le ${new Date(appointment.scheduled_at).toLocaleDateString('fr-FR')}`}
         actionText={isUpcoming ? "Programmer un rappel" : undefined}
-        onAction={() => {}}
+        onAction={() => handleSetReminder(appointment)}
       />
     );
   };
@@ -192,6 +194,32 @@ export default function HomeScreen() {
         loading={true}
       />
     ));
+  };
+
+  const handleSetReminder = async (appointment: Appointment) => {
+    if (Platform.OS === 'web') {
+      window.alert(
+        'Pour programmer un rappel, veuillez ouvrir l\'application sur votre téléphone.'
+      );
+    } else {
+      // Sur mobile, ouvrir l'app d'alarmes native
+      const appointmentDate = new Date(appointment.scheduled_at);
+      const reminderDate = new Date(appointmentDate.getTime() - 30 * 60000); // 30 min avant
+      
+      try {
+        if (Platform.OS === 'android') {
+          await IntentLauncher.startActivityAsync('android.intent.action.SHOW_ALARMS');
+        } else if (Platform.OS === 'ios') {
+          await Linking.openURL('clock://');
+        }
+      } catch (error) {
+        Alert.alert(
+          'Erreur',
+          error instanceof Error ? error.message : 'Impossible de programmer le rappel',
+          [{ text: 'OK' }]
+        );
+      }
+    }
   };
 
   return (
