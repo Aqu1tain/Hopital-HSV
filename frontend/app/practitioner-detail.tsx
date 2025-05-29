@@ -311,7 +311,7 @@ export default function PractitionerDetailScreen() {
       
       if (Platform.OS === 'web') {
         window.alert('Rendez-vous confirmé ✓\n\n' + successMessage);
-        router.push('/(tabs)/');
+        router.push('/');
       } else {
         Alert.alert(
           'Rendez-vous confirmé ✓', 
@@ -320,7 +320,7 @@ export default function PractitionerDetailScreen() {
             {
               text: 'OK',
               onPress: () => {
-                router.push('/(tabs)/');
+                router.push('/');
               }
             }
           ]
