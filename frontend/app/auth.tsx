@@ -308,34 +308,62 @@ export default function AuthScreen() {
               returnKeyType="next"
             />
             {signupErrors.phone ? <Text style={styles.helperError}>{signupErrors.phone}</Text> : <Text style={styles.helper}>Format: 10-15 chiffres</Text>}
-            <TouchableOpacity
-              style={[styles.input, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff' }, signupErrors.birth_date ? styles.inputError : null]}
-              onPress={() => setShowDatePicker(true)}
-              accessibilityLabel="Date de naissance"
-              activeOpacity={0.8}
-            >
-              <Text style={{ color: signupFields.birth_date ? '#222' : '#C0C0C0', fontSize: 14 }}>
-                {signupFields.birth_date || 'Date de naissance'}
-              </Text>
-            </TouchableOpacity>
-            {signupErrors.birth_date ? <Text style={styles.helperError}>{signupErrors.birth_date}</Text> : <Text style={styles.helper}>Format: JJ/MM/AAAA</Text>}
-            {showDatePicker && (
+            {Platform.OS === 'web' ? (
               <>
-                {/* DateTimePicker import must be at top: import DateTimePicker from '@react-native-community/datetimepicker' */}
-                <DateTimePicker
-                  value={signupFields.birth_date ? new Date(signupFields.birth_date.split('/').reverse().join('-')) : new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={(event, date) => {
-                    setShowDatePicker(false);
-                    if (date) {
-                      const d = date;
-                      const formatted = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                <TextInput
+                  style={[styles.input, signupErrors.birth_date ? styles.inputError : null]}
+                  placeholder="Date de naissance (JJ/MM/AAAA)"
+                  placeholderTextColor="#C0C0C0"
+                  value={signupFields.birth_date}
+                  onChangeText={(text) => {
+                    // Ensure format is DD/MM/YYYY
+                    let formatted = text;
+                    // Remove non-digit and non-slash characters
+                    formatted = text.replace(/[^0-9/]/g, '');
+                    // Auto-insert slashes for DD/MM/YYYY
+                    if (text.length === 2 || text.length === 5) {
+                      formatted += '/';
+                    }
+                    // Limit to DD/MM/YYYY length
+                    if (text.length <= 10) {
                       setSignupFields(f => ({ ...f, birth_date: formatted }));
                     }
                   }}
-                  maximumDate={new Date()}
+                  keyboardType="numeric"
+                  maxLength={10}
+                  accessibilityLabel="Date de naissance"
                 />
+                {signupErrors.birth_date ? <Text style={styles.helperError}>{signupErrors.birth_date}</Text> : <Text style={styles.helper}>Format: JJ/MM/AAAA</Text>}
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.input, { justifyContent: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff' }, signupErrors.birth_date ? styles.inputError : null]}
+                  onPress={() => setShowDatePicker(true)}
+                  accessibilityLabel="Date de naissance"
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: signupFields.birth_date ? '#222' : '#C0C0C0', fontSize: 14 }}>
+                    {signupFields.birth_date || 'Date de naissance'}
+                  </Text>
+                </TouchableOpacity>
+                {signupErrors.birth_date ? <Text style={styles.helperError}>{signupErrors.birth_date}</Text> : <Text style={styles.helper}>Format: JJ/MM/AAAA</Text>}
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={signupFields.birth_date ? new Date(signupFields.birth_date.split('/').reverse().join('-')) : new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, date) => {
+                      setShowDatePicker(false);
+                      if (date) {
+                        const d = date;
+                        const formatted = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                        setSignupFields(f => ({ ...f, birth_date: formatted }));
+                      }
+                    }}
+                    maximumDate={new Date()}
+                  />
+                )}
               </>
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>

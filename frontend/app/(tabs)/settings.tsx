@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import { useAuth } from './auth-context';
-import config from '../config/config';
+import { useAuth } from '@/app/auth-context';
+import config from '@/config/config';
 
 interface TextProps {
   textView: string;

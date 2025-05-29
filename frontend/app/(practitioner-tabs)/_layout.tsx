@@ -1,13 +1,12 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
-import { Calendar, Hospital, User, Settings } from 'lucide-react-native';
+import { Calendar, Users, User } from 'lucide-react-native';
 
 import { useAuth } from '../auth-context';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
 
-export default function TabLayout() {
+export default function PractitionerTabLayout() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -29,18 +28,18 @@ export default function TabLayout() {
         tabBarIconStyle: styles.tabBarIcon,
       }}>
       <Tabs.Screen
-        name="index"
+        name="planning"
         options={{
-          title: 'RDV',
+          title: 'Planning',
           tabBarIcon: ({ color }) => <Calendar color={color} size={24} />,
           tabBarItemStyle: styles.navItem
         }}
       />
       <Tabs.Screen
-        name="practitioners"
+        name="patients"
         options={{
-          title: 'Praticiens',
-          tabBarIcon: ({ color }) => <Hospital color={color} size={24} />,
+          title: 'Patients',
+          tabBarIcon: ({ color }) => <Users color={color} size={24} />,
           tabBarItemStyle: styles.navItem
         }}
       />
@@ -50,24 +49,6 @@ export default function TabLayout() {
           title: 'Profil',
           tabBarIcon: ({ color }) => <User color={color} size={24} />,
           tabBarItemStyle: styles.navItem
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Paramètres',
-          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
-          tabBarItemStyle: styles.navItem,
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="practitioner-detail"
-        options={{
-          title: 'Praticien',
-          tabBarIcon: ({ color }) => <User color={color} size={24} />,
-          tabBarItemStyle: styles.navItem,
-          href: null,
         }}
       />
     </Tabs>

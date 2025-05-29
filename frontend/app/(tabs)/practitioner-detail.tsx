@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import AppHeader from '../components/AppHeader';
-import { useAuth } from './auth-context';
-import config from '../config/config';
+import AppHeader from '../../components/AppHeader';
+import { useAuth } from '../auth-context';
+import config from '../../config/config';
 import { Calendar, Hospital, User, MapPin } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -396,7 +396,7 @@ export default function PractitionerDetailScreen() {
               <Image
                 source={{ uri: practitioner.image }}
                 style={styles.practitionerImage}
-                defaultSource={require('../assets/images/placeholder-doctor.jpg')}
+                defaultSource={require('@/assets/images/placeholder-doctor.jpg')}
               />
               {practitioner.isVerified && (
                 <View style={styles.onlineIndicator} />
@@ -504,9 +504,9 @@ export default function PractitionerDetailScreen() {
 
             {/* Time Slots */}
             {loadingSlots ? (
-              <View style={styles.loadingSlotsContainer}>
+              <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#2E4FD1" />
-                <Text style={styles.loadingSlotsText}>Chargement des créneaux...</Text>
+                <Text style={styles.loadingText}>Chargement des créneaux...</Text>
               </View>
             ) : (
               <>
@@ -566,31 +566,6 @@ export default function PractitionerDetailScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNavigation}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigateToTab('index')}
-        >
-          <Calendar size={24} color="#666" />
-          <Text style={styles.navText}>RDV</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigateToTab('practitioners')}
-        >
-          <Hospital size={24} color="#2E4FD1" />
-          <Text style={[styles.navText, styles.activeNavText]}>PRATICIENS</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigateToTab('profil')}
-        >
-          <User size={24} color="#666" />
-          <Text style={styles.navText}>PROFIL</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
@@ -608,6 +583,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
@@ -880,38 +860,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-  },
-
-  // Bottom Navigation
-  bottomNavigation: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    paddingVertical: 8,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  navText: {
-    fontSize: 11,
-    color: '#666',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  activeNavText: {
-    color: '#2E4FD1',
-  },
-  loadingSlotsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingSlotsText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
+  }
 });

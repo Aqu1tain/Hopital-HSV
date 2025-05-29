@@ -262,7 +262,7 @@ export default function PraticiensScreen() {
   }, [search, selectedSpecialty, selectedPayment, practitioners]);
 
   const handlePractitionerPress = (practitioner: Practitioner) => {
-    router.push(`/practitioner-detail?id=${practitioner.id}`);
+    router.push(`/(tabs)/practitioner-detail?id=${practitioner.id}`);
   };
 
   const renderItem = ({ item }: { item: Practitioner }) => (
