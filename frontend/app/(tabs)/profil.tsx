@@ -2,6 +2,9 @@ import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity
 import AppHeader from '../../components/AppHeader';
 import React, { useState } from 'react';
 import { router } from 'expo-router';
+import { useAuth } from '../auth-context';
+import { useRouter } from 'expo-router';
+import config from '../../config/config';
 
 const Bandeau = () => {
   return (
@@ -77,10 +80,15 @@ const Texte: React.FC<TextProps> = ({ textView, textSecondaryView, onChangeText,
 };
 
 export default function ProfilScreen() {
+  const { logout } = useAuth();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [isEditingSocialSecurity, setIsEditingSocialSecurity] = useState(false);
   const [isEditingAddress, setIsEditingAddress] = useState(false);
+  
   const [personalData, setPersonalData] = useState({
     dateOfBirth: '10 mars 2005',
     weight: '83',
@@ -88,20 +96,33 @@ export default function ProfilScreen() {
     medicalHistory: 'Fracture avant bras gauche',
     gender: 'Homme',
   });
+  
   const [contactData, setContactData] = useState({
     phone: '06 12 34 56 78',
     email: 'valentin.lamouche@mail.com',
   });
+  
   const [socialSecurityData, setSocialSecurityData] = useState({
     socialSecurityNumber: '1 05 05 75 123 456 78',
     healthInsuranceFund: 'CPAM Paris',
     mutualInsurance: 'MutuelleSanté+',
   });
+  
   const [addressData, setAddressData] = useState({
     street: '12 Rue des Lilas',
     postalCode: '75001',
     city: 'Paris',
   });
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await fetch(`${config.API_URL}/auth/logout`, { method: 'POST' });
+    } catch {}
+    logout();
+    router.replace('/auth');
+    setLoading(false);
+  };
 
   const handleEditPersonalToggle = () => {
     setIsEditingPersonal(!isEditingPersonal);
@@ -280,6 +301,20 @@ export default function ProfilScreen() {
               </TouchableOpacity>
             )}
           </View>
+          
+          {/* Logout section */}
+          <View style={styles.sectionSeparator} />
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              disabled={loading}
+            >
+              <Text style={styles.logoutText}>
+                {loading ? 'Déconnexion...' : 'Se déconnecter'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -452,5 +487,18 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     borderWidth: 4,
     borderColor: '#fff',
+  },
+  logoutButton: {
+    marginTop: 32,
+    backgroundColor: '#e74c3c',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
