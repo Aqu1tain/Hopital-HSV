@@ -1,14 +1,23 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bell } from 'lucide-react-native';
+import { router } from 'expo-router'; // Ajout de l'import pour expo-router
 
 export default function AppHeader() {
+  const handleBellPress = () => {
+    router.push('./notifications_prac'); // Redirige vers notifications_prac
+  };
+
   return (
     <View style={styles.header}>
       <View style={styles.headerTextContainer}>
         <Text style={styles.headerGreeting}>Bonjour</Text>
-        <Text style={styles.headerName}><Text style={{fontWeight: 'bold', fontFamily: 'Inter-Bold'}}>Valentin LAMOUCHE</Text></Text>
+        <Text style={styles.headerName}>
+          <Text style={{ fontWeight: 'bold', fontFamily: 'Inter-Bold' }}>Valentin LAMOUCHE</Text>
+        </Text>
       </View>
-      <Bell color="#222" size={22} style={styles.bellIcon} />
+      <TouchableOpacity onPress={handleBellPress}>
+        <Bell color="#222" size={22} style={styles.bellIcon} />
+      </TouchableOpacity>
     </View>
   );
 }

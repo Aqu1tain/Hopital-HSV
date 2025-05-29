@@ -40,6 +40,22 @@ export default function RootLayout() {
             ),
           }}
         />
+        <Stack.Screen
+          name="notifications_prac"
+          options={{
+            header: () => (
+              <View style={headerStyles.header}>
+                <TouchableOpacity
+                  style={headerStyles.backButton}
+                  onPress={() => router.push('./profil')}
+                >
+                  <Text style={headerStyles.backIcon}>←</Text>
+                </TouchableOpacity>
+                <Text style={headerStyles.headerTitle}>Notifications</Text>
+              </View>
+            ),
+          }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
