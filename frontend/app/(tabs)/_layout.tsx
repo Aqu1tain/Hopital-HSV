@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet } from 'react-native';
-import { Calendar, Hospital, User } from 'lucide-react-native';
+import { Calendar, Hospital, User, Settings } from 'lucide-react-native';
 
 import { useAuth } from '../auth-context';
 import { useRouter } from 'expo-router';
