@@ -12,7 +12,7 @@ const Bandeau = () => {
     <View style={styles.bandeau}>
       <TouchableOpacity
         style={styles.settingsButton}
-        onPress={() => router.replace('../settings')}
+        onPress={() => router.replace('/(tabs)/settings')}
         accessible
         accessibilityLabel="Ouvrir les paramètres"
       >

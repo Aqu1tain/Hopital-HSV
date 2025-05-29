@@ -52,6 +52,24 @@ export default function TabLayout() {
           tabBarItemStyle: styles.navItem
         }}
       />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Paramètres',
+          tabBarIcon: ({ color }) => <Settings color={color} size={24} />,
+          tabBarItemStyle: styles.navItem,
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="practitioner-detail"
+        options={{
+          title: 'Praticien',
+          tabBarIcon: ({ color }) => <User color={color} size={24} />,
+          tabBarItemStyle: styles.navItem,
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
