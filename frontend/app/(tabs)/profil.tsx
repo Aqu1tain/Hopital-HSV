@@ -132,135 +132,154 @@ export default function ProfilScreen() {
           <Text style={styles.pseudo}>Valentin LAMOUCHE</Text>
         </View>
         <View style={styles.container}>
-          <View style={styles.headerContainer}>
-            <Text style={styles.titre}>Informations personnelles</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditPersonalToggle}
-            >
-              <Text style={styles.penIcon}>✎</Text>
-              <Text style={[styles.editText, isEditingPersonal && styles.editTextActive]}>
-                {isEditingPersonal ? 'Enregistrer' : 'Modifier'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.section}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.titre}>Informations personnelles</Text>
+              {!isEditingPersonal && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={handleEditPersonalToggle}
+                >
+                  <Text style={styles.penIcon}>✎</Text>
+                  <Text style={styles.editText}>Modifier</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {[
+              { textView: 'Date de Naissance : ', value: personalData.dateOfBirth, onChange: (text: string) => setPersonalData({ ...personalData, dateOfBirth: text }) },
+              { textView: 'Poids : ', value: personalData.weight, onChange: (text: string) => setPersonalData({ ...personalData, weight: text }) },
+              { textView: 'Allergies : ', value: personalData.allergies, onChange: (text: string) => setPersonalData({ ...personalData, allergies: text }) },
+              { textView: 'Antécédents médicaux : ', value: personalData.medicalHistory, onChange: (text: string) => setPersonalData({ ...personalData, medicalHistory: text }) },
+              { textView: 'Sexe : ', value: personalData.gender, onChange: (text: string) => setPersonalData({ ...personalData, gender: text }) },
+            ].map((item, index) => (
+              <Texte
+                key={index}
+                textView={item.textView}
+                textSecondaryView={item.value}
+                isEditing={isEditingPersonal}
+                onChangeText={item.onChange}
+              />
+            ))}
+            {isEditingPersonal && (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditPersonalToggle}
+              >
+                <Text style={styles.penIcon}>✎</Text>
+                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Texte
-            textView="Date de Naissance : "
-            textSecondaryView={personalData.dateOfBirth}
-            isEditing={isEditingPersonal}
-            onChangeText={(text) => setPersonalData({ ...personalData, dateOfBirth: text })}
-          />
-          <Texte
-            textView="Poids : "
-            textSecondaryView={personalData.weight}
-            isEditing={isEditingPersonal}
-            onChangeText={(text) => setPersonalData({ ...personalData, weight: text })}
-          />
-          <Texte
-            textView="Allergies : "
-            textSecondaryView={personalData.allergies}
-            isEditing={isEditingPersonal}
-            onChangeText={(text) => setPersonalData({ ...personalData, allergies: text })}
-          />
-          <Texte
-            textView="Antécédents médicaux : "
-            textSecondaryView={personalData.medicalHistory}
-            isEditing={isEditingPersonal}
-            onChangeText={(text) => setPersonalData({ ...personalData, medicalHistory: text })}
-          />
-          <Texte
-            textView="Sexe : "
-            textSecondaryView={personalData.gender}
-            isEditing={isEditingPersonal}
-            onChangeText={(text) => setPersonalData({ ...personalData, gender: text })}
-          />
           <View style={styles.sectionSeparator} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.titre}>Informations de Contact</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditContactToggle}
-            >
-              <Text style={styles.penIcon}>✎</Text>
-              <Text style={[styles.editText, isEditingContact && styles.editTextActive]}>
-                {isEditingContact ? 'Enregistrer' : 'Modifier'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.section}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.titre}>Informations de Contact</Text>
+              {!isEditingContact && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={handleEditContactToggle}
+                >
+                  <Text style={styles.penIcon}>✎</Text>
+                  <Text style={styles.editText}>Modifier</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {[
+              { textView: 'Téléphone : ', value: contactData.phone, onChange: (text: string) => setContactData({ ...contactData, phone: text }) },
+              { textView: 'Mail : ', value: contactData.email, onChange: (text: string) => setContactData({ ...contactData, email: text }) },
+            ].map((item, index) => (
+              <Texte
+                key={index}
+                textView={item.textView}
+                textSecondaryView={item.value}
+                isEditing={isEditingContact}
+                onChangeText={item.onChange}
+              />
+            ))}
+            {isEditingContact && (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditContactToggle}
+              >
+                <Text style={styles.penIcon}>✎</Text>
+                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Texte
-            textView="Téléphone : "
-            textSecondaryView={contactData.phone}
-            isEditing={isEditingContact}
-            onChangeText={(text) => setContactData({ ...contactData, phone: text })}
-          />
-          <Texte
-            textView="Mail : "
-            textSecondaryView={contactData.email}
-            isEditing={isEditingContact}
-            onChangeText={(text) => setContactData({ ...contactData, email: text })}
-          />
           <View style={styles.sectionSeparator} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.titre}>Sécurité Sociale</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditSocialSecurityToggle}
-            >
-              <Text style={styles.penIcon}>✎</Text>
-              <Text style={[styles.editText, isEditingSocialSecurity && styles.editTextActive]}>
-                {isEditingSocialSecurity ? 'Enregistrer' : 'Modifier'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.section}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.titre}>Sécurité Sociale</Text>
+              {!isEditingSocialSecurity && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={handleEditSocialSecurityToggle}
+                >
+                  <Text style={styles.penIcon}>✎</Text>
+                  <Text style={styles.editText}>Modifier</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {[
+              { textView: 'Numéro de sécurité sociale : ', value: socialSecurityData.socialSecurityNumber, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, socialSecurityNumber: text }) },
+              { textView: 'Caisse d\'assurance maladie : ', value: socialSecurityData.healthInsuranceFund, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, healthInsuranceFund: text }) },
+              { textView: 'Mutuelle : ', value: socialSecurityData.mutualInsurance, onChange: (text: string) => setSocialSecurityData({ ...socialSecurityData, mutualInsurance: text }) },
+            ].map((item, index) => (
+              <Texte
+                key={index}
+                textView={item.textView}
+                textSecondaryView={item.value}
+                isEditing={isEditingSocialSecurity}
+                onChangeText={item.onChange}
+              />
+            ))}
+            {isEditingSocialSecurity && (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditSocialSecurityToggle}
+              >
+                <Text style={styles.penIcon}>✎</Text>
+                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Texte
-            textView="Numéro de sécurité sociale : "
-            textSecondaryView={socialSecurityData.socialSecurityNumber}
-            isEditing={isEditingSocialSecurity}
-            onChangeText={(text) => setSocialSecurityData({ ...socialSecurityData, socialSecurityNumber: text })}
-          />
-          <Texte
-            textView="Caisse d'assurance maladie : "
-            textSecondaryView={socialSecurityData.healthInsuranceFund}
-            isEditing={isEditingSocialSecurity}
-            onChangeText={(text) => setSocialSecurityData({ ...socialSecurityData, healthInsuranceFund: text })}
-          />
-          <Texte
-            textView="Mutuelle : "
-            textSecondaryView={socialSecurityData.mutualInsurance}
-            isEditing={isEditingSocialSecurity}
-            onChangeText={(text) => setSocialSecurityData({ ...socialSecurityData, mutualInsurance: text })}
-          />
           <View style={styles.sectionSeparator} />
-          <View style={styles.headerContainer}>
-            <Text style={styles.titre}>Adresse</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditAddressToggle}
-            >
-              <Text style={styles.penIcon}>✎</Text>
-              <Text style={[styles.editText, isEditingAddress && styles.editTextActive]}>
-                {isEditingAddress ? 'Enregistrer' : 'Modifier'}
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.section}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.titre}>Adresse</Text>
+              {!isEditingAddress && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={handleEditAddressToggle}
+                >
+                  <Text style={styles.penIcon}>✎</Text>
+                  <Text style={styles.editText}>Modifier</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {[
+              { textView: 'Rue : ', value: addressData.street, onChange: (text: string) => setAddressData({ ...addressData, street: text }) },
+              { textView: 'Code postal : ', value: addressData.postalCode, onChange: (text: string) => setAddressData({ ...addressData, postalCode: text }) },
+              { textView: 'Ville : ', value: addressData.city, onChange: (text: string) => setAddressData({ ...addressData, city: text }) },
+            ].map((item, index) => (
+              <Texte
+                key={index}
+                textView={item.textView}
+                textSecondaryView={item.value}
+                isEditing={isEditingAddress}
+                onChangeText={item.onChange}
+              />
+            ))}
+            {isEditingAddress && (
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditAddressToggle}
+              >
+                <Text style={styles.penIcon}>✎</Text>
+                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <Texte
-            textView="Rue : "
-            textSecondaryView={addressData.street}
-            isEditing={isEditingAddress}
-            onChangeText={(text) => setAddressData({ ...addressData, street: text })}
-          />
-          <Texte
-            textView="Code postal : "
-            textSecondaryView={addressData.postalCode}
-            isEditing={isEditingAddress}
-            onChangeText={(text) => setAddressData({ ...addressData, postalCode: text })}
-          />
-          <Texte
-            textView="Ville : "
-            textSecondaryView={addressData.city}
-            isEditing={isEditingAddress}
-            onChangeText={(text) => setAddressData({ ...addressData, city: text })}
-          />
         </View>
       </ScrollView>
     </View>
@@ -280,6 +299,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 40,
   },
+  section: {
+    marginBottom: 10,
+  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -296,6 +318,8 @@ const styles = StyleSheet.create({
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 10,
+    justifyContent: 'flex-end',
   },
   penIcon: {
     color: '#007BFF',
@@ -312,17 +336,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   editTextActive: {
-    color: '#28A745',
+    color: '#007BFF',
     textDecorationLine: 'underline',
   },
   textContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    paddingBottom: 8,
+    marginTop: 6,
+    paddingBottom: 6,
   },
   text: {
     color: '#000',
@@ -332,8 +354,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   infoContainer: {
-    width: 150,
-    marginRight: 10,
+    width: 100,
+    marginRight: 3,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -371,7 +393,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   sectionSeparator: {
-    height: 20,
+    height: 30,
   },
   header: {
     flexDirection: 'row',
@@ -413,7 +435,8 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     alignItems: 'center',
-    marginTop: -60,
+    marginTop: -50,
+    marginBottom: 20,
   },
   pseudo: {
     marginTop: 10,
