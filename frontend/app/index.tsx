@@ -1,12 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, Platform } from 'react-native';
-import Entypo from '@expo/vector-icons/Entypo';
+import { Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Font from 'expo-font';
 import { useRouter } from 'expo-router';
 import { runAllTheInitStuff } from './init';
-import SomeProvider from './SomeProvider.ts';
-import AnotherProvider from './AnotherProvider.ts';
 import WebSplashScreen from './WebSplashScreen';
 
 // Garder le splash natif visible
