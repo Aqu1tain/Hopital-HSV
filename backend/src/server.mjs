@@ -936,12 +936,12 @@ app.get('/api/appointments/doctor', authMiddleware, async (req, res) => {
     // Find practitioner ID for the user
     const { data: practitioner, error: practitionerError } = await supabase
       .from('practitioners')
-      .select('id')
+      .select('user_id')
       .eq('user_id', userId)
       .single();
 
     if (practitionerError || !practitioner) {
-      return res.status(404).json({ error: 'Practitioner not found' });
+      return res.status(404).json({ error: `Practitioner not found: ${practitionerError && practitionerError.message}` });
     }
 
     // Set date range for the specified day
@@ -963,7 +963,7 @@ app.get('/api/appointments/doctor', authMiddleware, async (req, res) => {
           users(first_name, last_name, profile_url)
         )
       `)
-      .eq('practitioner_id', practitioner.id)
+      .eq('practitioner_id', practitioner.user_id)
       .gte('scheduled_at', startOfDay.toISOString())
       .lte('scheduled_at', endOfDay.toISOString())
       .neq('status', 'cancelled')
@@ -988,7 +988,7 @@ app.get('/api/appointments/doctor', authMiddleware, async (req, res) => {
     res.json(formattedAppointments);
   } catch (error) {
     console.error('Error fetching doctor appointments:', error);
-    res.status(500).json({ error: 'Failed to fetch appointments' });
+    res.status(500).json({ error: `Failed to fetch appointments: ${error && error.message}` });
   }
 });
 
