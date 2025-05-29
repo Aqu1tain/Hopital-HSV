@@ -4,6 +4,7 @@ import AppHeader from '../../components/AppHeader';
 import { useAuth } from '../auth-context';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import config from '../../config/config';
 
 export default function ProfilScreen() {
   const { logout } = useAuth();
@@ -13,7 +14,7 @@ export default function ProfilScreen() {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      await fetch('http://localhost:3000/auth/logout', { method: 'POST' });
+      await fetch(`${config.API_URL}/auth/logout`, { method: 'POST' });
     } catch {}
     logout();
     router.replace('/auth');

@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS "public"."practitioners" (
     "secu_coverage_percent" smallint,
     "verification_documents" "text"[] DEFAULT '{}'::"text"[],
     "is_verified" boolean DEFAULT false NOT NULL,
+    "specialty" "text" DEFAULT ''::"text",
     CONSTRAINT "practitioners_secu_coverage_percent_check" CHECK ((("secu_coverage_percent" >= 0) AND ("secu_coverage_percent" <= 100)))
 );
 
@@ -171,7 +172,8 @@ CREATE TABLE IF NOT EXISTS "public"."users" (
     "last_name" "text" NOT NULL,
     "role" "public"."user_role" NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "profile_url" "text" DEFAULT 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png'::"text"
 );
 
 

@@ -5,7 +5,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { useRouter, Link } from 'expo-router';
 import { useAuth } from './auth-context';
 
-const BACKEND_URL = 'http://192.168.235.59:3000'; // Change if needed
+import config from '../config/config';
 
 type Step = 'email' | 'code' | 'signup';
 type MainStep = Step | 'practitioner';
@@ -57,7 +57,7 @@ export default function AuthScreen() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/request`, {
+      const res = await fetch(`${config.API_URL}/auth/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -79,7 +79,7 @@ export default function AuthScreen() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/request`, {
+      const res = await fetch(`${config.API_URL}/auth/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -101,7 +101,7 @@ export default function AuthScreen() {
     setError('');
     setSuccess('');
     try {
-      const res = await fetch(`${BACKEND_URL}/auth/verify`, {
+      const res = await fetch(`${config.API_URL}/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, code }),
@@ -157,7 +157,7 @@ export default function AuthScreen() {
         const [day, month, year] = birth_date.split('/');
         birth_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       }
-      const res = await fetch(`${BACKEND_URL}/signup/patient`, {
+      const res = await fetch(`${config.API_URL}/signup/patient`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
