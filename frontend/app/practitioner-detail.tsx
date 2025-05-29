@@ -55,11 +55,11 @@ interface AvailableSlot {
   dayNumber: string;
   month: string;
   available: boolean;
-  timeSlots?: string[];
 }
 
 interface TimeSlot {
   time: string;
+  datetime: string;
   available: boolean;
 }
 
@@ -73,20 +73,10 @@ export default function PractitionerDetailScreen() {
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<number>(0);
   const [selectedTime, setSelectedTime] = useState<string>('');
+  const [selectedDateTime, setSelectedDateTime] = useState<string>('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-
-  // Generate time slots based on selected date
-  const generateTimeSlots = (dayIndex: number): TimeSlot[] => {
-    const morningSlots = ['9:00', '9:30', '10:00', '10:30', '11:00', '11:30'];
-    const afternoonSlots = ['14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
-    const allSlots = [...morningSlots, ...afternoonSlots];
-    
-    // Simulate some slots being taken
-    return allSlots.map(time => ({
-      time,
-      available: Math.random() > 0.3 // 70% chance of being available
-    }));
-  };
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
 
   // Generate next 5 days for appointment slots
   const generateAvailableSlots = (): AvailableSlot[] => {
@@ -100,15 +90,12 @@ export default function PractitionerDetailScreen() {
       date.setDate(today.getDate() + i);
       const dayOfWeek = date.getDay();
       
-      // Make weekends unavailable
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      
       slots.push({
         date: date.toISOString().split('T')[0],
         dayName: dayNames[dayOfWeek],
         dayNumber: date.getDate().toString(),
         month: monthNames[date.getMonth()],
-        available: !isWeekend,
+        available: true, // Will be determined by API
       });
     }
     
@@ -150,36 +137,212 @@ export default function PractitionerDetailScreen() {
     }
   };
 
+  const fetchTimeSlots = async (date: string) => {
+    if (!token || !id) return;
+    
+    try {
+      setLoadingSlots(true);
+      const response = await fetch(
+        `${config.API_URL}/api/practitioners/${id}/availability?date=${date}`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erreur lors du chargement des créneaux');
+      }
+
+      const data = await response.json();
+      
+      if (data.available && data.timeSlots) {
+        setTimeSlots(data.timeSlots);
+        
+        // Update slot availability
+        setAvailableSlots(prev => prev.map(slot => 
+          slot.date === date 
+            ? { ...slot, available: data.timeSlots.length > 0 }
+            : slot
+        ));
+      } else {
+        setTimeSlots([]);
+        setAvailableSlots(prev => prev.map(slot => 
+          slot.date === date 
+            ? { ...slot, available: false }
+            : slot
+        ));
+      }
+    } catch (error) {
+      console.error('Erreur fetchTimeSlots:', error);
+      setTimeSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
   useEffect(() => {
     fetchPractitioner();
   }, [id, token]);
-
+  
   useEffect(() => {
-    // Generate time slots when date selection changes
-    if (availableSlots[selectedSlot]?.available) {
-      setTimeSlots(generateTimeSlots(selectedSlot));
-      setSelectedTime(''); // Reset selected time
-    }
-  }, [selectedSlot, availableSlots]);
-
-  const handleBookAppointment = () => {
-    const slot = availableSlots[selectedSlot];
-    if (!slot.available || !selectedTime) return;
-    
-    Alert.alert(
-      'Confirmer le rendez-vous',
-      `Voulez-vous réserver un rendez-vous le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime} ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Confirmer', 
-          onPress: () => {
-            Alert.alert('Succès', 'Votre rendez-vous a été confirmé !');
+    // Fetch availability for all days when slots are generated
+    const checkAllDaysAvailability = async () => {
+      if (availableSlots.length > 0 && token && id) {
+        // Check availability for each day
+        const availabilityPromises = availableSlots.map(async (slot) => {
+          try {
+            const response = await fetch(
+              `${config.API_URL}/api/practitioners/${id}/availability?date=${slot.date}`,
+              {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+  
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                date: slot.date,
+                available: data.available && data.timeSlots && data.timeSlots.length > 0
+              };
+            }
+          } catch (error) {
+            console.error(`Error checking availability for ${slot.date}:`, error);
           }
+          return { date: slot.date, available: false };
+        });
+  
+        const results = await Promise.all(availabilityPromises);
+        
+        // Update all slots with their availability
+        setAvailableSlots(prev => prev.map(slot => {
+          const result = results.find(r => r.date === slot.date);
+          return { ...slot, available: result?.available || false };
+        }));
+        
+        // Fetch time slots for the initially selected date
+        if (availableSlots.length > 0) {
+          fetchTimeSlots(availableSlots[0].date);
         }
-      ]
-    );
-  };
+      }
+    };
+  
+    checkAllDaysAvailability();
+  }, [availableSlots.length, token, id]); // Only check when we have the initial slots
+  
+  useEffect(() => {
+    // Fetch time slots when date selection changes (user clicks)
+    if (availableSlots.length > 0 && selectedSlot < availableSlots.length && selectedSlot > 0) {
+      const selectedDate = availableSlots[selectedSlot].date;
+      fetchTimeSlots(selectedDate);
+      setSelectedTime(''); // Reset selected time
+      setSelectedDateTime('');
+    }
+  }, [selectedSlot]);
+
+  const handleBookAppointment = async () => {
+    console.log('handleBookAppointment called');
+    console.log('selectedDateTime:', selectedDateTime);
+    console.log('id:', id);
+    console.log('token:', token);
+    
+    if (!selectedDateTime || !id || !token) {
+      // For web, use window.alert or create a custom modal
+      if (Platform.OS === 'web') {
+        window.alert(`Données manquantes: DateTime: ${selectedDateTime}, ID: ${id}, Token: ${token ? 'present' : 'missing'}`);
+      } else {
+        Alert.alert('Erreur', `Données manquantes: DateTime: ${selectedDateTime}, ID: ${id}, Token: ${token ? 'present' : 'missing'}`);
+      }
+      return;
+    }
+    
+    const slot = availableSlots[selectedSlot];
+    
+    // For web, use window.confirm
+    const confirmBooking = Platform.OS === 'web' 
+      ? window.confirm(`Voulez-vous réserver un rendez-vous le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime} ?`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Confirmer le rendez-vous',
+            `Voulez-vous réserver un rendez-vous le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime} ?`,
+            [
+              { text: 'Annuler', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Confirmer', onPress: () => resolve(true) }
+            ]
+          );
+        });
+  
+    if (!confirmBooking) return;
+  
+    try {
+      setBookingInProgress(true);
+      
+      console.log('Sending appointment request...');
+      
+      const response = await fetch(`${config.API_URL}/api/appointments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          practitioner_id: id,
+          scheduled_at: selectedDateTime,
+          notes: '',
+        }),
+      });
+  
+      const responseData = await response.json();
+      console.log('Response:', response.status, responseData);
+  
+      if (!response.ok) {
+        throw new Error(responseData.error || 'Erreur lors de la réservation');
+      }
+      
+      // Success message
+      const successMessage = `Votre rendez-vous avec ${practitioner?.title || ''} ${practitioner?.name} est confirmé pour le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime}.\n\nVous recevrez un email de confirmation.`;
+      
+      if (Platform.OS === 'web') {
+        window.alert('Rendez-vous confirmé ✓\n\n' + successMessage);
+        router.push('/(tabs)/');
+      } else {
+        Alert.alert(
+          'Rendez-vous confirmé ✓', 
+          successMessage,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.push('/(tabs)/');
+              }
+            }
+          ]
+        );
+      }
+      
+      // Refresh the time slots
+      fetchTimeSlots(slot.date);
+      
+    } catch (error) {
+      console.error('Erreur réservation:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Impossible de réserver le rendez-vous';
+      
+      if (Platform.OS === 'web') {
+        window.alert('Erreur: ' + errorMessage);
+      } else {
+        Alert.alert('Erreur', errorMessage);
+      }
+    } finally {
+      setBookingInProgress(false);
+    }
+  };  
 
   const navigateToTab = (tab: 'practitioners' | 'profil' | 'index') => {
     if (tab === 'index') {
@@ -187,6 +350,13 @@ export default function PractitionerDetailScreen() {
     } else {
       router.push(`/(tabs)/${tab}` as any);
     }
+  };
+
+  const handleTimeSelection = (slot: TimeSlot) => {
+    if (!slot.available) return;
+    console.log('Selected time slot:', slot); // Debug log
+    setSelectedTime(slot.time);
+    setSelectedDateTime(slot.datetime);
   };
 
   if (loading) {
@@ -312,8 +482,7 @@ export default function PractitionerDetailScreen() {
                     selectedSlot === index && styles.selectedDateSlot,
                     !slot.available && styles.unavailableDateSlot
                   ]}
-                  onPress={() => slot.available && setSelectedSlot(index)}
-                  disabled={!slot.available}
+                  onPress={() => setSelectedSlot(index)}
                 >
                   <Text style={[
                     styles.dayText,
@@ -334,51 +503,65 @@ export default function PractitionerDetailScreen() {
             </View>
 
             {/* Time Slots */}
-            {availableSlots[selectedSlot]?.available && (
-              <>
-                <Text style={styles.timeSlotsTitle}>Créneaux disponibles</Text>
-                <View style={styles.timeSlotContainer}>
-                  {timeSlots.map((slot) => (
-                    <TouchableOpacity
-                      key={slot.time}
-                      style={[
-                        styles.timeSlot,
-                        selectedTime === slot.time && styles.selectedTimeSlot,
-                        !slot.available && styles.unavailableTimeSlot
-                      ]}
-                      onPress={() => slot.available && setSelectedTime(slot.time)}
-                      disabled={!slot.available}
-                    >
-                      <Text style={[
-                        styles.timeText,
-                        selectedTime === slot.time && styles.selectedTimeText,
-                        !slot.available && styles.unavailableTimeText
-                      ]}>
-                        {slot.time}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {/* Book Button */}
-                <TouchableOpacity 
-                  style={[styles.bookButton, !selectedTime && styles.bookButtonDisabled]}
-                  onPress={handleBookAppointment}
-                  disabled={!selectedTime}
-                >
-                  <Text style={styles.bookButtonText}>
-                    {selectedTime ? 'Confirmer le rendez-vous' : 'Sélectionnez un créneau'}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {!availableSlots[selectedSlot]?.available && (
-              <View style={styles.unavailableMessage}>
-                <Text style={styles.unavailableMessageText}>
-                  Aucun créneau disponible ce jour
-                </Text>
+            {loadingSlots ? (
+              <View style={styles.loadingSlotsContainer}>
+                <ActivityIndicator size="small" color="#2E4FD1" />
+                <Text style={styles.loadingSlotsText}>Chargement des créneaux...</Text>
               </View>
+            ) : (
+              <>
+                {timeSlots.length > 0 ? (
+                  <>
+                    <Text style={styles.timeSlotsTitle}>Créneaux disponibles</Text>
+                    <View style={styles.timeSlotContainer}>
+                      {timeSlots.map((slot) => (
+                        <TouchableOpacity
+                          key={slot.time}
+                          style={[
+                            styles.timeSlot,
+                            selectedTime === slot.time && styles.selectedTimeSlot,
+                            !slot.available && styles.unavailableTimeSlot
+                          ]}
+                          onPress={() => handleTimeSelection(slot)}
+                          disabled={!slot.available}
+                        >
+                          <Text style={[
+                            styles.timeText,
+                            selectedTime === slot.time && styles.selectedTimeText,
+                            !slot.available && styles.unavailableTimeText
+                          ]}>
+                            {slot.time}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Book Button */}
+                    <TouchableOpacity 
+                      style={[
+                        styles.bookButton, 
+                        (!selectedTime || bookingInProgress) && styles.bookButtonDisabled
+                      ]}
+                      onPress={handleBookAppointment}
+                      disabled={!selectedTime || bookingInProgress}
+                    >
+                      {bookingInProgress ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.bookButtonText}>
+                          {selectedTime ? 'Confirmer le rendez-vous' : 'Sélectionnez un créneau'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <View style={styles.unavailableMessage}>
+                    <Text style={styles.unavailableMessageText}>
+                      Aucun créneau disponible ce jour
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
           </View>
         </View>
@@ -720,5 +903,15 @@ const styles = StyleSheet.create({
   },
   activeNavText: {
     color: '#2E4FD1',
+  },
+  loadingSlotsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingSlotsText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
