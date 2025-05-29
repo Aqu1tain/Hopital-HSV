@@ -14,21 +14,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'RDV',
-          tabBarIcon: ({ color }) => <Calendar color={color} size={24} />, // calendar icon
+          tabBarIcon: ({ color }) => <Calendar color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="practitioners"
         options={{
           title: 'Praticiens',
-          tabBarIcon: ({ color }) => <Hospital color={color} size={24} />, // hospital icon
+          tabBarIcon: ({ color }) => <Hospital color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="profil"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ color }) => <User color={color} size={24} />, // user icon
+          tabBarIcon: ({ color }) => <User color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          href: null, // Désactive l'onglet dans la barre de navigation
         }}
       />
     </Tabs>
