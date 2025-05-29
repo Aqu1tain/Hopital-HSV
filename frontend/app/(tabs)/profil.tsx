@@ -207,8 +207,47 @@ export default function ProfilScreen() {
         'Femme': 'F',
         'Autre': 'Other'
       };
-      
+
+      // Parse French date format (e.g., "12 janvier 2025") to ISO format
+      let birthDateISO = null;
+      if (personalData.dateOfBirth) {
+        // Split the date string and map French month names to numbers
+        const months: { [key: string]: string } = {
+          'janvier': '01',
+          'février': '02',
+          'mars': '03',
+          'avril': '04',
+          'mai': '05',
+          'juin': '06',
+          'juillet': '07',
+          'août': '08',
+          'septembre': '09',
+          'octobre': '10',
+          'novembre': '11',
+          'décembre': '12'
+        };
+        const dateParts = personalData.dateOfBirth.split(' ');
+        if (dateParts.length === 3) {
+          const day = dateParts[0].padStart(2, '0');
+          const month = months[dateParts[1].toLowerCase()];
+          const year = dateParts[2];
+          if (day && month && year) {
+            birthDateISO = `${year}-${month}-${day}`;
+            // Validate the date
+            const parsedDate = new Date(birthDateISO);
+            if (isNaN(parsedDate.getTime())) {
+              throw new Error('Invalid date format');
+            }
+          } else {
+            throw new Error('Invalid date format');
+          }
+        } else {
+          throw new Error('Invalid date format');
+        }
+      }
+
       const updateData = {
+        birth_date: birthDateISO,
         weight_kg: personalData.weight ? parseFloat(personalData.weight) : null,
         allergies: personalData.allergies ? personalData.allergies.split(',').map(a => a.trim()) : [],
         medical_history: personalData.medicalHistory,

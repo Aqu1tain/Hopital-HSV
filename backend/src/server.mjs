@@ -989,6 +989,7 @@ app.patch('/api/patients/update', authMiddleware, async (req, res) => {
     }
     
     const {
+      birth_date,
       weight_kg,
       allergies,
       medical_history,
@@ -1004,6 +1005,15 @@ app.patch('/api/patients/update', authMiddleware, async (req, res) => {
     
     // Prepare update object - only include fields that were provided
     const updateData = {};
+    
+    // Handle birth_date
+    if (birth_date !== undefined) {
+      // Validate ISO format (YYYY-MM-DD)
+      if (birth_date && !/^\d{4}-\d{2}-\d{2}$/.test(birth_date)) {
+        return res.status(400).json({ error: 'Invalid birth_date format. Use YYYY-MM-DD' });
+      }
+      updateData.birth_date = birth_date;
+    }
     
     // Handle numeric field properly
     if (weight_kg !== undefined) {
