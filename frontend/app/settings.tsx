@@ -74,6 +74,7 @@ export default function SettingsScreen() {
     email: '',
     first_name: '',
     last_name: '',
+    profile_url: '',
   });
   const [privacyData, setPrivacyData] = useState({
     dataSharing: true,
@@ -104,6 +105,7 @@ export default function SettingsScreen() {
         email: data.email || '',
         first_name: data.first_name || '',
         last_name: data.last_name || '',
+        profile_url: data.profile_url || '',
       });
     } catch (error) {
       console.error('Erreur lors de la récupération des données:', error);
