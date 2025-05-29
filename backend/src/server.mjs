@@ -374,10 +374,13 @@ app.get('/api/appointments/upcoming', authMiddleware, async (req, res) => {
         scheduled_at,
         status,
         notes,
-        patient:patients!appointments_patient_id_fkey(user_id, users(first_name, last_name)),
+        patient:patients!appointments_patient_id_fkey(
+          user_id, 
+          users(first_name, last_name, phone, profile_url)
+        ),
         practitioner:practitioners!appointments_practitioner_id_fkey(
           user_id,
-          users(first_name, last_name, profile_url),
+          users(first_name, last_name, phone, profile_url),
           title,
           street_address,
           city,
@@ -409,10 +412,14 @@ app.get('/api/appointments/past', authMiddleware, async (req, res) => {
         id,
         scheduled_at,
         status,
-        patient:patients!appointments_patient_id_fkey(user_id, users(first_name, last_name)),
+        notes,
+        patient:patients!appointments_patient_id_fkey(
+          user_id, 
+          users(first_name, last_name, phone, profile_url)
+        ),
         practitioner:practitioners!appointments_practitioner_id_fkey(
           user_id,
-          users(first_name, last_name, profile_url),
+          users(first_name, last_name, phone, profile_url),
           title,
           street_address,
           city,
@@ -422,7 +429,7 @@ app.get('/api/appointments/past', authMiddleware, async (req, res) => {
       .or(`patient_id.eq.${userId},practitioner_id.eq.${userId}`)
       .lt('scheduled_at', today)
       .order('scheduled_at', { ascending: false })
-      .limit(5);
+      .limit(20); // Increased limit to get more recent patients
 
     if (error) throw error;
     
