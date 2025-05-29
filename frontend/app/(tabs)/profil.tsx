@@ -10,7 +10,10 @@ const Bandeau = () => {
         style={styles.settingsButton}
         onPress={() => router.replace('../settings')}
       >
-        <Text style={styles.settingsIcon}>⚙️</Text>
+        <Image
+          source={require('@/assets/images/settings.png')}
+          style={styles.settingsIcon}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -430,8 +433,9 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   settingsIcon: {
-    color: '#FFFFFF',
-    fontSize: 28,
+    width: 28,
+    height: 28,
+    tintColor: '#FFFFFF',
   },
   imageWrapper: {
     alignItems: 'center',
