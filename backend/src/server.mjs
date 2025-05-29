@@ -918,6 +918,80 @@ app.get('/api/practitioners/:id/appointments', authMiddleware, async (req, res) 
   }
 });
 
+// Get appointments for the authenticated doctor on a specific date
+app.get('/api/appointments/doctor', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
+    }
+
+    // Verify user is a practitioner
+    if (req.user.role !== 'practitioner') {
+      return res.status(403).json({ error: 'Only practitioners can access this endpoint' });
+    }
+
+    // Find practitioner ID for the user
+    const { data: practitioner, error: practitionerError } = await supabase
+      .from('practitioners')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (practitionerError || !practitioner) {
+      return res.status(404).json({ error: 'Practitioner not found' });
+    }
+
+    // Set date range for the specified day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Fetch appointments for the practitioner on the specified date
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        scheduled_at,
+        status,
+        notes,
+        patient:patients!appointments_patient_id_fkey(
+          user_id,
+          users(first_name, last_name, profile_url)
+        )
+      `)
+      .eq('practitioner_id', practitioner.id)
+      .gte('scheduled_at', startOfDay.toISOString())
+      .lte('scheduled_at', endOfDay.toISOString())
+      .neq('status', 'cancelled')
+      .order('scheduled_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Format response to match frontend expectations
+    const formattedAppointments = appointments.map(appt => ({
+      id: appt.id,
+      scheduled_at: appt.scheduled_at,
+      patient: {
+        user_id: appt.patient.user_id,
+        users: {
+          first_name: appt.patient.users.first_name,
+          last_name: appt.patient.users.last_name,
+          profile_url: appt.patient.users.profile_url,
+        },
+      },
+    }));
+
+    res.json(formattedAppointments);
+  } catch (error) {
+    console.error('Error fetching doctor appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
 // Update user data (phone and email)
 app.patch('/api/users/update', authMiddleware, async (req, res) => {
   try {

@@ -5,8 +5,8 @@ import {
   ScrollView,
   StyleSheet,
   Image,
-  TouchableOpacity,
   Dimensions,
+  TouchableOpacity, // Ajout pour les boutons
 } from 'react-native';
 import { useAuth } from '../auth-context';
 import config from '../../config/config';
@@ -55,17 +55,31 @@ export default function PlanningScreen() {
   const { token, user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(new Date()); // État pour la date sélectionnée
 
-  // Pour l'exemple, prends "aujourd'hui". À adapter pour navigation entre jours.
-  const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  // Format de la date pour l'API (YYYY-MM-DD)
+  const dateStr = selectedDate.toISOString().slice(0, 10);
 
+  // Fonctions pour naviguer entre les jours
+  const goToPreviousDay = () => {
+    const prevDay = new Date(selectedDate);
+    prevDay.setDate(selectedDate.getDate() - 1);
+    setSelectedDate(prevDay);
+  };
+
+  const goToNextDay = () => {
+    const nextDay = new Date(selectedDate);
+    nextDay.setDate(selectedDate.getDate() + 1);
+    setSelectedDate(nextDay);
+  };
+
+  // Charger les rendez-vous pour la date sélectionnée
   useEffect(() => {
     if (!token) return;
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${config.API_URL}/api/appointments/doctor?date=${todayStr}`, {
+        const res = await fetch(`${config.API_URL}/api/appointments/doctor?date=${dateStr}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         const data = await res.json();
@@ -75,36 +89,46 @@ export default function PlanningScreen() {
       }
       setLoading(false);
     })();
-  }, [token]);
+  }, [token, dateStr]); // Dépendance sur dateStr pour recharger à chaque changement de date
 
-  // Transforme les rendez-vous en slots indexés par heure (ex: {10: appt, 11: appt})
-  const appointmentsByHour = appointments.reduce((acc, appt) => {
-    const d = new Date(appt.scheduled_at);
-    const h = d.getHours();
-    acc[h] = appt;
-    return acc;
-  }, {} as { [hour: number]: Appointment });
+    const appointmentsByHour = Array.isArray(appointments)
+          ? appointments.reduce((acc, appt) => {
+              const d = new Date(appt.scheduled_at);
+              const h = d.getHours();
+              acc[h] = appt;
+              return acc;
+            }, {} as { [hour: number]: Appointment })
+          : {};
 
-  // Ligne rouge "heure actuelle"
+  // Ligne rouge "heure actuelle" (seulement si c'est aujourd'hui)
   const now = new Date();
+  const isToday = dateStr === now.toISOString().slice(0, 10);
   const currentHour = now.getHours();
   const currentMinute = now.getMinutes();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <AppHeader />
-      {/* Titre jour */}
-      <Text style={{ fontSize: 19, fontWeight: '500', marginLeft: 22, marginBottom: 7 }}>
-        {today.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-      </Text>
+      {/* Barre de navigation des jours */}
+      <View style={styles.dateNav}>
+        <TouchableOpacity onPress={goToPreviousDay} style={styles.navButton}>
+          <Text style={styles.navButtonText}>◄</Text>
+        </TouchableOpacity>
+        <Text style={styles.dateText}>
+          {selectedDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </Text>
+        <TouchableOpacity onPress={goToNextDay} style={styles.navButton}>
+          <Text style={styles.navButtonText}>►</Text>
+        </TouchableOpacity>
+      </View>
       {/* Grille planning */}
       <View style={styles.gridContainer}>
         <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
           <View style={styles.grid}>
             {HOURS.map((hour, i) => {
               const appt = appointmentsByHour[hour];
-              // Pour la ligne de l'heure actuelle
-              const isCurrentHour = todayStr === now.toISOString().slice(0, 10) && hour === currentHour;
+              // Pour la ligne de l'heure actuelle (seulement si c'est aujourd'hui)
+              const isCurrentHour = isToday && hour === currentHour;
               return (
                 <View key={hour} style={styles.row}>
                   {/* Heure (gauche) */}
@@ -242,26 +266,25 @@ const styles = StyleSheet.create({
     right: -6,
     top: -4,
   },
-  bottomNav: {
+  // Styles pour la navigation des jours
+  dateNav: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderColor: '#ECECEC',
-    backgroundColor: '#fff',
-    height: 68,
-    alignItems: 'flex-end',
-    justifyContent: 'space-around',
-    paddingBottom: 8,
-  },
-  navItem: {
     alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingVertical: 10,
   },
-  navText: {
-    fontSize: 12,
-    marginTop: 2,
+  dateText: {
+    fontSize: 19,
     fontWeight: '500',
     color: '#222',
+    textTransform: 'capitalize',
+  },
+  navButton: {
+    padding: 10,
+  },
+  navButtonText: {
+    fontSize: 20,
+    color: '#2E4FD1',
   },
 });
-
