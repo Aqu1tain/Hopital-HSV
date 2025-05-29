@@ -4,7 +4,7 @@ import { router } from 'expo-router'; // Ajout de l'import pour expo-router
 
 export default function AppHeader() {
   const handleBellPress = () => {
-    router.push('./notifications_prac'); // Redirige vers notifications_prac
+    router.push('/notifications_prac'); // Redirige vers notifications_prac
   };
 
   return (
