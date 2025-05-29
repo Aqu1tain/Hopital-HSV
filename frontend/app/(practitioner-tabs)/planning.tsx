@@ -19,13 +19,19 @@ const PatientAvatar = () => (
   </View>
 );
 
-const IconPlanning = ({ active }) => (
+interface IconProps {
+  active: boolean;
+}
+
+const IconPlanning = ({ active }: IconProps) => (
   <Text style={{ color: active ? "#2E4FD1" : "#888", fontSize: 24 }}>📒</Text>
 );
-const IconPatients = ({ active }) => (
+
+const IconPatients = ({ active }: IconProps) => (
   <Text style={{ color: active ? "#2E4FD1" : "#888", fontSize: 24 }}>🩺</Text>
 );
-const IconProfile = ({ active }) => (
+
+const IconProfile = ({ active }: IconProps) => (
   <Text style={{ color: active ? "#2E4FD1" : "#888", fontSize: 24 }}>👤</Text>
 );
 
