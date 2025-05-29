@@ -918,6 +918,279 @@ app.get('/api/practitioners/:id/appointments', authMiddleware, async (req, res) 
   }
 });
 
+// Update user data (phone and email)
+app.patch('/api/users/update', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { phone, email } = req.body;
+    
+    // Validate input
+    if (!email && !phone) {
+      return res.status(400).json({ error: 'At least one field must be provided' });
+    }
+    
+    // Prepare update object
+    const updateData = {
+      updated_at: new Date().toISOString()
+    };
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    
+    // Check if email is already taken by another user
+    if (email) {
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .neq('id', userId)
+        .single();
+      
+      if (existingUser) {
+        return res.status(409).json({ error: 'Cette adresse email est déjà utilisée' });
+      }
+    }
+    
+    // Update user data
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating user:', updateError);
+      return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        phone: updatedUser.phone
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error in /api/users/update:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// Update patient profile data
+app.patch('/api/patients/update', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    
+    // Verify user is a patient
+    if (req.user.role !== 'patient') {
+      return res.status(403).json({ error: 'Only patients can update patient data' });
+    }
+    
+    const {
+      weight_kg,
+      allergies,
+      medical_history,
+      gender,
+      social_security_number,
+      health_insurance,
+      coverage_mutuelle,
+      street_address,
+      postal_code,
+      city,
+      country
+    } = req.body;
+    
+    // Prepare update object - only include fields that were provided
+    const updateData = {};
+    
+    // Handle numeric field properly
+    if (weight_kg !== undefined) {
+      updateData.weight_kg = weight_kg ? parseFloat(weight_kg) : null;
+    }
+    
+    // Handle array field properly
+    if (allergies !== undefined) {
+      updateData.allergies = Array.isArray(allergies) ? allergies : [];
+    }
+    
+    if (medical_history !== undefined) updateData.medical_history = medical_history;
+    if (gender !== undefined) updateData.gender = gender;
+    if (social_security_number !== undefined) updateData.social_security_number = social_security_number;
+    if (health_insurance !== undefined) updateData.health_insurance = health_insurance;
+    if (coverage_mutuelle !== undefined) updateData.coverage_mutuelle = coverage_mutuelle;
+    if (street_address !== undefined) updateData.street_address = street_address;
+    if (postal_code !== undefined) updateData.postal_code = postal_code;
+    if (city !== undefined) updateData.city = city;
+    if (country !== undefined) updateData.country = country;
+    
+    // Validate gender if provided
+    if (gender && !['M', 'F', 'Other'].includes(gender)) {
+      return res.status(400).json({ error: 'Invalid gender value' });
+    }
+    
+    // Check if social security number is already taken by another patient
+    if (social_security_number) {
+      const { data: existingPatient, error: checkError } = await supabase
+        .from('patients')
+        .select('user_id')
+        .eq('social_security_number', social_security_number)
+        .neq('user_id', userId)
+        .single();
+      
+      if (existingPatient) {
+        return res.status(409).json({ error: 'Ce numéro de sécurité sociale est déjà utilisé' });
+      }
+    }
+    
+    // Update patient data
+    const { data: updatedPatient, error: updateError } = await supabase
+      .from('patients')
+      .update(updateData)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating patient:', updateError);
+      return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+    }
+    
+    res.json({
+      success: true,
+      patient: updatedPatient
+    });
+    
+  } catch (error) {
+    console.error('Error in /api/patients/update:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// Update user profile picture
+app.post('/api/users/profile-picture', authMiddleware, upload.single('image'), async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucune image fournie' });
+    }
+    
+    // Delete old profile picture if it exists and is not the default
+    const { data: currentUser, error: fetchError } = await supabase
+      .from('users')
+      .select('profile_url')
+      .eq('id', userId)
+      .single();
+    
+    if (fetchError) {
+      console.error('Error fetching user:', fetchError);
+      return res.status(500).json({ error: 'Erreur lors de la récupération des données utilisateur' });
+    }
+    
+    // If user has a custom profile picture, delete it from storage
+    if (currentUser.profile_url && 
+        !currentUser.profile_url.includes('wikipedia.org') && 
+        currentUser.profile_url.includes('supabase')) {
+      const oldPath = currentUser.profile_url.split('/').slice(-2).join('/');
+      await supabase.storage.from('profiles').remove([oldPath]);
+    }
+    
+    // Upload new profile picture
+    const fileExt = req.file.originalname.split('.').pop();
+    const fileName = `${userId}-${Date.now()}.${fileExt}`;
+    const filePath = `avatars/${fileName}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('profiles')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (uploadError) {
+      console.error('Error uploading profile picture:', uploadError);
+      return res.status(500).json({ error: 'Erreur lors du téléchargement de l\'image' });
+    }
+    
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('profiles')
+      .getPublicUrl(filePath);
+    
+    // Update user profile_url and updated_at
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        profile_url: urlData.publicUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating user profile_url:', updateError);
+      // Try to delete the uploaded file
+      await supabase.storage.from('profiles').remove([filePath]);
+      return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' });
+    }
+    
+    res.json({
+      success: true,
+      profile_url: updatedUser.profile_url
+    });
+    
+  } catch (error) {
+    console.error('Error in /api/users/profile-picture:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
+// Get patient medical history
+app.get('/api/patients/medical-history', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    
+    // Verify user is a patient
+    if (req.user.role !== 'patient') {
+      return res.status(403).json({ error: 'Only patients can access patient data' });
+    }
+    
+    const { data: patient, error } = await supabase
+      .from('patients')
+      .select(`
+        birth_date,
+        weight_kg,
+        allergies,
+        medical_history,
+        gender,
+        social_security_number,
+        health_insurance,
+        coverage_mutuelle,
+        street_address,
+        postal_code,
+        city,
+        country
+      `)
+      .eq('user_id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching patient data:', error);
+      return res.status(500).json({ error: 'Erreur lors de la récupération des données' });
+    }
+    
+    res.json(patient);
+    
+  } catch (error) {
+    console.error('Error in /api/patients/medical-history:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
