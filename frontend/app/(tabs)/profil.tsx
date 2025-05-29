@@ -16,7 +16,10 @@ const Bandeau = () => {
         accessible
         accessibilityLabel="Ouvrir les paramètres"
       >
-        <Text style={styles.settingsIcon}>⚙️</Text>
+        <Image
+          source={require('@/assets/images/settings.png')}
+          style={styles.settingsIcon}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -656,6 +659,11 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     backgroundColor: '#C0C0C0',
+  },
+  settingsIcon: {
+    width: 28,
+    height: 28,
+    tintColor: '#FFFFFF',
   },
   logoutText: {
     color: '#fff',
