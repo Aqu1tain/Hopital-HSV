@@ -237,15 +237,15 @@ export default function PractitionerDetailScreen() {
     checkAllDaysAvailability();
   }, [availableSlots.length, token, id]); // Only check when we have the initial slots
   
-  useEffect(() => {
-    // Fetch time slots when date selection changes (user clicks)
-    if (availableSlots.length > 0 && selectedSlot < availableSlots.length && selectedSlot > 0) {
-      const selectedDate = availableSlots[selectedSlot].date;
-      fetchTimeSlots(selectedDate);
-      setSelectedTime(''); // Reset selected time
-      setSelectedDateTime('');
-    }
-  }, [selectedSlot]);
+    useEffect(() => {
+      // Fetch time slots when date selection changes (user clicks)
+      if (availableSlots.length > 0 && availableSlots[selectedSlot]) {
+        const selectedDate = availableSlots[selectedSlot].date;
+        fetchTimeSlots(selectedDate);
+        setSelectedTime('');
+        setSelectedDateTime('');
+      }
+    }, [selectedSlot]);
 
   const handleBookAppointment = async () => {
     console.log('handleBookAppointment called');
@@ -306,25 +306,25 @@ export default function PractitionerDetailScreen() {
         throw new Error(responseData.error || 'Erreur lors de la réservation');
       }
       
-      const successMessage = `Votre demande de rendez-vous avec ${practitioner?.title || ''} ${practitioner?.name} a été envoyée pour le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime}.\n\nVous recevrez une confirmation une fois que le praticien aura accepté votre demande.`;
+    const successMessage = `Votre demande de rendez-vous avec ${practitioner?.title || ''} ${practitioner?.name} a été envoyée pour le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime}.\n\nVous recevrez une confirmation une fois que le praticien aura accepté votre demande.`;
 
-      if (Platform.OS === 'web') {
-        window.alert('Demande envoyée ✓\n\n' + successMessage);
-        router.push('/');
-      } else {
-        Alert.alert(
-          'Demande envoyée ✓', 
-          successMessage,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                router.push('/');
-              }
+    if (Platform.OS === 'web') {
+      window.alert('Demande envoyée ✓\n\n' + successMessage);
+      router.push('/');
+    } else {
+      Alert.alert(
+        'Demande envoyée ✓', 
+        successMessage,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.push('/');
             }
-          ]
-        );
-      }
+          }
+        ]
+      );
+    }
       
       // Refresh the time slots
       fetchTimeSlots(slot.date);
