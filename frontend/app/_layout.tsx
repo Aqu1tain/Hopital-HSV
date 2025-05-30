@@ -42,44 +42,8 @@ function LayoutContent() {
         name="practitioner-signup"
         options={{
           headerTitle: 'S’inscrire comme Praticien',
-          headerStyle: styles.header,
-          headerTitleStyle: styles.headerTitle,
-          headerTintColor: '#FFFFFF',
         }}
       />
-      <Stack.Screen
-        name="settings"
-        options={{
-          header: () => (
-            <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-              >
-                <Text style={styles.backIcon}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Paramètres</Text>
-            </View>
-          ),
-        }}
-      />
-      <Stack.Screen
-        name="notifications_prac"
-        options={{
-          header: () => (
-            <View style={styles.header}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-              >
-                <Text style={styles.backIcon}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Notifications</Text>
-            </View>
-          ),
-        }}
-      />
-      <Stack.Screen name="practitioner-detail" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
@@ -121,14 +85,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: '#000000',
-    height: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
   backButton: {
     position: 'absolute',
     left: 20,
