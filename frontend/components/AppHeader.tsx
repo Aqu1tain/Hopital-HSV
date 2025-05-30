@@ -25,7 +25,6 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
 
   useEffect(() => {
     if (showNotificationBadge && user) {
-      console.log('Fetching notification count...');
       fetchNotificationCount();
       
       // Refresh notification count every 30 seconds when not on notifications page
@@ -53,7 +52,6 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
           'Content-Type': 'application/json',
         },
       });
-      console.log('Response:', response);
   
       if (response.ok) {
         const data = await response.json();
