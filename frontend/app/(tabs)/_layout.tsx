@@ -1,11 +1,9 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { Calendar, Hospital, User, Settings } from 'lucide-react-native';
-
 import { useAuth } from '../auth-context';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
 
 export default function TabLayout() {
   const { isAuthenticated } = useAuth();
@@ -27,13 +25,14 @@ export default function TabLayout() {
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarIconStyle: styles.tabBarIcon,
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: 'RDV',
           tabBarIcon: ({ color }) => <Calendar color={color} size={24} />,
-          tabBarItemStyle: styles.navItem
+          tabBarItemStyle: styles.navItem,
         }}
       />
       <Tabs.Screen
@@ -41,7 +40,7 @@ export default function TabLayout() {
         options={{
           title: 'Praticiens',
           tabBarIcon: ({ color }) => <Hospital color={color} size={24} />,
-          tabBarItemStyle: styles.navItem
+          tabBarItemStyle: styles.navItem,
         }}
       />
       <Tabs.Screen
@@ -49,7 +48,15 @@ export default function TabLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color }) => <User color={color} size={24} />,
-          tabBarItemStyle: styles.navItem
+          tabBarItemStyle: styles.navItem,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          tabBarIcon: ({ color }) => <Calendar color={color} size={24} />, // Using Calendar icon as placeholder; adjust if needed
+          href: null, // Désactive l'onglet dans la barre de navigation
         }}
       />
       <Tabs.Screen

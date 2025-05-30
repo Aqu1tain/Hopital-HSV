@@ -63,6 +63,22 @@ function LayoutContent() {
           ),
         }}
       />
+      <Stack.Screen
+        name="notifications_prac"
+        options={{
+          header: () => (
+            <View style={styles.header}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.backIcon}>←</Text>
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Notifications</Text>
+            </View>
+          ),
+        }}
+      />
       <Stack.Screen name="practitioner-detail" options={{ headerShown: false }} />
       <Stack.Screen name="+not-found" />
     </Stack>
