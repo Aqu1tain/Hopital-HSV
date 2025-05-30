@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import { Stack } from 'expo-router';
-import { runAllTheInitStuff } from './init';
+import { runAllTheInitStuff } from '../utils/init'; // Updated import path
 import WebSplashScreen from './WebSplashScreen';
 
 SplashScreen.preventAutoHideAsync();
