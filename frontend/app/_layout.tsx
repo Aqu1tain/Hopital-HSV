@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { Stack } from 'expo-router';
 import { runAllTheInitStuff } from './init';
@@ -20,7 +19,7 @@ export default function Layout() {
   }, []);
 
   if (!appIsReady) {
-    return Platform.OS === 'web' ? <WebSplashScreen /> : null;
+    return <WebSplashScreen />;
   }
 
   return (
