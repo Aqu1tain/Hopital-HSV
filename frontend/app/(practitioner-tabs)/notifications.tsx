@@ -11,7 +11,7 @@ interface AppointmentRequest {
   patientAvatar?: string;
   time: string;
   date: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
+  status: 'pending' | 'scheduled' | 'rejected' | 'cancelled';
   section: string;
 }
 
@@ -23,7 +23,7 @@ const AppointmentRequestItem: React.FC<{
 }> = ({ item, showSectionHeader, onAccept, onReject }) => {
   const getStatusIcon = () => {
     switch (item.status) {
-      case 'accepted':
+      case 'scheduled':
         return <View style={styles.statusIcon}><Check color="#34C759" size={20} /></View>;
       case 'rejected':
       case 'cancelled':
@@ -45,7 +45,7 @@ const AppointmentRequestItem: React.FC<{
           <Text style={styles.patientName}>{item.patientName}</Text>
           <Text style={styles.requestText}>
             {item.status === 'pending' && `a demandé un rendez vous à ${item.time} ${item.date}`}
-            {item.status === 'accepted' && `a rendez vous à ${item.time} ${item.date}`}
+            {item.status === 'scheduled' && `a rendez vous à ${item.time} ${item.date}`}
             {item.status === 'rejected' && `avait rendez-vous ${item.date} à ${item.time}`}
             {item.status === 'cancelled' && `a annulé son rendez vous prévu ${item.date} à ${item.time}`}
           </Text>
@@ -115,7 +115,7 @@ export default function PractitionerNotificationsScreen() {
       
       if (response.ok) {
         setAppointments(prev => prev.map(apt => 
-          apt.id === appointmentId ? { ...apt, status: 'accepted' } : apt
+          apt.id === appointmentId ? { ...apt, status: 'scheduled' } : apt
         ));
       }
     } catch (error) {
@@ -245,10 +245,10 @@ const styles = StyleSheet.create({
   },
   patientName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#000',
     marginBottom: 4,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter',
   },
   requestText: {
     fontSize: 14,

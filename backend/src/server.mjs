@@ -764,7 +764,7 @@ app.post('/api/appointments', authMiddleware, async (req, res) => {
         patient_id,
         practitioner_id,
         scheduled_at,
-        status: 'scheduled',
+        status: 'pending',
         notes: notes || null
       }])
       .select()
@@ -772,71 +772,14 @@ app.post('/api/appointments', authMiddleware, async (req, res) => {
     
     if (createError) throw createError;
     
-    // Send confirmation email to patient
-    const { data: patient, error: patientError } = await supabase
-      .from('users')
-      .select('email, first_name, last_name')
-      .eq('id', patient_id)
-      .single();
-    
-    const { data: practitioner, error: practitionerError } = await supabase
-      .from('practitioners')
-      .select(`
-        users!inner(first_name, last_name),
-        title,
-        street_address,
-        postal_code,
-        city
-      `)
-      .eq('user_id', practitioner_id)
-      .single();
-    
-    if (!patientError && !practitionerError && patient && practitioner) {
-      const appointmentDateTime = new Date(scheduled_at);
-      const dateStr = appointmentDateTime.toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      const timeStr = appointmentDateTime.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      
-      try {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM,
-          to: patient.email,
-          subject: 'Confirmation de votre rendez-vous',
-          html: `
-            <h2>Confirmation de rendez-vous</h2>
-            <p>Bonjour ${patient.first_name} ${patient.last_name},</p>
-            <p>Votre rendez-vous a été confirmé avec :</p>
-            <p><strong>${practitioner.title || ''} ${practitioner.users.first_name} ${practitioner.users.last_name}</strong></p>
-            <p><strong>Date :</strong> ${dateStr}</p>
-            <p><strong>Heure :</strong> ${timeStr}</p>
-            <p><strong>Adresse :</strong><br>
-            ${practitioner.street_address}<br>
-            ${practitioner.postal_code} ${practitioner.city}</p>
-            ${notes ? `<p><strong>Notes :</strong> ${notes}</p>` : ''}
-            <p>En cas d'empêchement, merci de nous prévenir au plus tôt.</p>
-            <p>Cordialement,<br>L'équipe médicale</p>
-          `
-        });
-      } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError);
-        // Continue even if email fails
-      }
-    }
-    
     res.json({
       success: true,
       appointment: {
         id: appointment.id,
         scheduled_at: appointment.scheduled_at,
         status: appointment.status
-      }
+      },
+      message: 'Demande de rendez-vous envoyée. Vous recevrez une confirmation une fois acceptée par le praticien.'
     });
     
   } catch (error) {
@@ -1362,17 +1305,23 @@ app.get('/api/notifications/patient', authMiddleware, async (req, res) => {
       let cancellable = false;
       let read = false;
 
-      if (apt.status === 'scheduled') {
+      if (apt.status === 'pending') {
         messageParts = [
-          { text: 'Le ', bold: false },
+          { text: 'Demande de rendez-vous envoyée à ', bold: false },
           { text: practitionerName, bold: true },
-          { text: ` a accepté votre demande de rendez-vous pour ${time}`, bold: false }
+          { text: ` pour ${time}`, bold: false }
+        ];
+        cancellable = true;
+      } else if (apt.status === 'scheduled') {
+        messageParts = [
+          { text: practitionerName, bold: true },
+          { text: ` a accepté votre rendez-vous pour ${time}`, bold: false }
         ];
         cancellable = true;
       } else if (apt.status === 'cancelled') {
         messageParts = [
           { text: practitionerName, bold: true },
-          { text: ` a annulé le rendez-vous prévu à ${time}`, bold: false }
+          { text: ` a annulé votre rendez-vous pour ${time}`, bold: false }
         ];
         read = true;
       }
@@ -1409,6 +1358,7 @@ app.get('/api/notifications/practitioner', authMiddleware, async (req, res) => {
         )
       `)
       .eq('practitioner_id', userId)
+      .in('status', ['pending', 'scheduled', 'cancelled'])
       .order('scheduled_at', { ascending: false });
 
     if (error) throw error;
@@ -1420,20 +1370,21 @@ app.get('/api/notifications/practitioner', authMiddleware, async (req, res) => {
       const time = scheduledDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       
       // Determine section
+      const referenceDate = apt.status === 'pending' ? new Date(apt.created_at) : scheduledDate;
       const today = new Date();
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
       
       let section = '';
       let date = '';
-      if (scheduledDate.toDateString() === today.toDateString()) {
+      if (referenceDate.toDateString() === today.toDateString()) {
         section = "Aujourd'hui";
         date = "aujourd'hui";
-      } else if (scheduledDate.toDateString() === yesterday.toDateString()) {
+      } else if (referenceDate.toDateString() === yesterday.toDateString()) {
         section = 'Hier';
         date = "hier";
       } else {
-        section = scheduledDate.toLocaleDateString('fr-FR');
+        section = referenceDate.toLocaleDateString('fr-FR');
         date = `le ${scheduledDate.toLocaleDateString('fr-FR')}`;
       }
 
@@ -1443,7 +1394,7 @@ app.get('/api/notifications/practitioner', authMiddleware, async (req, res) => {
         patientAvatar: apt.patient.user.profile_url,
         time,
         date,
-        status: apt.status === 'scheduled' ? 'accepted' : apt.status,
+        status: apt.status,
         section
       };
     });
@@ -1525,17 +1476,79 @@ app.post('/api/appointments/:id/accept', authMiddleware, async (req, res) => {
   
   try {
     // Update appointment status to scheduled
-    const { error } = await supabase
+    const { data: appointment, error: updateError } = await supabase
       .from('appointments')
       .update({ status: 'scheduled' })
       .eq('id', id)
-      .eq('practitioner_id', userId);
+      .eq('practitioner_id', userId)
+      .eq('status', 'pending') // Only accept pending appointments
+      .select()
+      .single();
     
-    if (error) throw error;
+    if (updateError) throw updateError;
     
-    // TODO: Send notification to patient about accepted appointment
+    if (!appointment) {
+      return res.status(404).json({ error: 'Rendez-vous non trouvé ou déjà traité' });
+    }
+
+    const { data: patient, error: patientError } = await supabase
+      .from('users')
+      .select('email, first_name, last_name')
+      .eq('id', appointment.patient_id)
+      .single();
     
-    res.json({ success: true });
+    const { data: practitioner, error: practitionerError } = await supabase
+      .from('practitioners')
+      .select(`
+        users!inner(first_name, last_name),
+        title,
+        street_address,
+        postal_code,
+        city
+      `)
+      .eq('user_id', userId)
+      .single();
+    
+    if (!patientError && !practitionerError && patient && practitioner) {
+      const appointmentDateTime = new Date(appointment.scheduled_at);
+      const dateStr = appointmentDateTime.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const timeStr = appointmentDateTime.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      try {
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM,
+          to: patient.email,
+          subject: 'Rendez-vous confirmé !',
+          html: `
+            <h2>Votre rendez-vous a été accepté ✓</h2>
+            <p>Bonjour ${patient.first_name} ${patient.last_name},</p>
+            <p><strong>${practitioner.title || ''} ${practitioner.users.first_name} ${practitioner.users.last_name}</strong> a accepté votre demande de rendez-vous.</p>
+            <p><strong>Date :</strong> ${dateStr}</p>
+            <p><strong>Heure :</strong> ${timeStr}</p>
+            <p><strong>Adresse :</strong><br>
+            ${practitioner.street_address}<br>
+            ${practitioner.postal_code} ${practitioner.city}</p>
+            <p>En cas d'empêchement, merci de nous prévenir au plus tôt.</p>
+            <p>Cordialement,<br>L'équipe médicale</p>
+          `
+        });
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Rendez-vous accepté avec succès, vous recevrez un email de confirmation'
+    });
   } catch (error) {
     console.error('Error accepting appointment:', error);
     res.status(500).json({ error: 'Failed to accept appointment' });

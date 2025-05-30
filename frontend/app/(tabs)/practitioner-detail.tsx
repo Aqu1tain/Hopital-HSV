@@ -306,15 +306,14 @@ export default function PractitionerDetailScreen() {
         throw new Error(responseData.error || 'Erreur lors de la réservation');
       }
       
-      // Success message
-      const successMessage = `Votre rendez-vous avec ${practitioner?.title || ''} ${practitioner?.name} est confirmé pour le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime}.\n\nVous recevrez un email de confirmation.`;
-      
+      const successMessage = `Votre demande de rendez-vous avec ${practitioner?.title || ''} ${practitioner?.name} a été envoyée pour le ${slot.dayName} ${slot.dayNumber} ${slot.month} à ${selectedTime}.\n\nVous recevrez une confirmation une fois que le praticien aura accepté votre demande.`;
+
       if (Platform.OS === 'web') {
-        window.alert('Rendez-vous confirmé ✓\n\n' + successMessage);
+        window.alert('Demande envoyée ✓\n\n' + successMessage);
         router.push('/');
       } else {
         Alert.alert(
-          'Rendez-vous confirmé ✓', 
+          'Demande envoyée ✓', 
           successMessage,
           [
             {
