@@ -80,11 +80,11 @@ export default function PraticiensScreen() {
   const [isLocationModalVisible, setIsLocationModalVisible] = useState(false);
   const [locationInput, setLocationInput] = useState('');
   const [useLocation, setUseLocation] = useState(true);
-  const [filtersExpanded, setFiltersExpanded] = useState(true);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [activeFiltersCount, setActiveFiltersCount] = useState(0);
 
   // Animation for filter expansion
-  const filterAnimation = useState(new Animated.Value(1))[0];
+  const filterAnimation = useState(new Animated.Value(0))[0];
 
   // Nouvelle version fetch pour permettre le refresh dans tous les cas
   const fetchPractitioners = async (options?: { forceNoLocation?: boolean }) => {

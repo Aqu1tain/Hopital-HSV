@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React, { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
-import { Calendar, Users, User } from 'lucide-react-native';
+import { Calendar, Users, User, Bell } from 'lucide-react-native';
 
 import { useAuth } from '../auth-context';
 import { useRouter } from 'expo-router';
@@ -49,6 +49,13 @@ export default function PractitionerTabLayout() {
           title: 'Profil',
           tabBarIcon: ({ color }) => <User color={color} size={24} />,
           tabBarItemStyle: styles.navItem
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          href: null
         }}
       />
     </Tabs>

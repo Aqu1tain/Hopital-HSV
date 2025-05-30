@@ -87,6 +87,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+  const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]); // Add this
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [availablePractitioners, setAvailablePractitioners] = useState<Practitioner[]>([]);
 
@@ -96,7 +97,7 @@ export default function HomeScreen() {
     try {
       setRefreshing(true);
       
-      // Fetch upcoming appointments
+      // Fetch upcoming appointments (exclude cancelled)
       const upcomingRes = await fetch(`${config.API_URL}/api/appointments/upcoming`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -105,7 +106,7 @@ export default function HomeScreen() {
       });
       const upcomingData = await upcomingRes.json();
       
-      // Fetch past appointments
+      // Fetch past appointments (exclude cancelled)
       const pastRes = await fetch(`${config.API_URL}/api/appointments/past`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -123,8 +124,13 @@ export default function HomeScreen() {
       });
       const practitionersData = await practitionersRes.json();
       
-      setUpcomingAppointments(upcomingData || []);
-      setPastAppointments(pastData || []);
+      // Separate pending and scheduled appointments
+      const pending = (upcomingData || []).filter((apt: Appointment) => apt.status === 'pending');
+      const scheduled = (upcomingData || []).filter((apt: Appointment) => apt.status === 'scheduled');
+      
+      setPendingAppointments(pending);
+      setUpcomingAppointments(scheduled);
+      setPastAppointments((pastData || []).filter((apt: Appointment) => apt.status !== 'cancelled'));
       setAvailablePractitioners(practitionersData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -137,6 +143,28 @@ export default function HomeScreen() {
   useEffect(() => {
     fetchData();
   }, [token]);
+
+  const renderPendingAppointmentCard = (appointment: Appointment) => {
+    const name = `${appointment.practitioner.users.first_name} ${appointment.practitioner.users.last_name}`;
+    const title = appointment.practitioner.title || '';
+    const specialty = appointment.practitioner.specialty || 'Médecin Généraliste';
+    const address = appointment.practitioner.street_address 
+      ? `${appointment.practitioner.street_address}, ${appointment.practitioner.city}`
+      : 'Adresse non disponible';
+    
+    return (
+      <View key={appointment.id} style={[styles.card, styles.pendingCard]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.cardTitle}>{`${title} ${name} – ${specialty}`}</Text>
+          <Text style={styles.cardDetails}>
+            {`Demandé pour le ${formatAppointmentDate(appointment.scheduled_at)}`}
+          </Text>
+          <Text style={styles.pendingStatus}>En attente de confirmation</Text>
+        </View>
+        <View style={styles.pendingIndicator} />
+      </View>
+    );
+  };
 
   const formatAppointmentDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -253,10 +281,17 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
+            {pendingAppointments.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Demandes en attente</Text>
+                {pendingAppointments.map(appt => renderPendingAppointmentCard(appt))}
+              </>
+            )}
+            
             {upcomingAppointments.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>Vos prochains rendez-vous</Text>
-                {upcomingAppointments.map(appt => renderAppointmentCard(appt, true))}
+               <Text style={styles.sectionTitle}>Vos prochains rendez-vous</Text>
+              {upcomingAppointments.map(appt => renderAppointmentCard(appt, true))}
               </>
             )}
 
@@ -466,5 +501,24 @@ const styles = StyleSheet.create({
     height: 16,
     backgroundColor: '#e0e0e0',
     borderRadius: 4,
+  },
+  pendingCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFA500', 
+    backgroundColor: '#FFF9E6', 
+  },
+  pendingStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#FF8C00',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  pendingIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFA500',
+    marginLeft: 12,
   },
 });

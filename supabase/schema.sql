@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS "public"."appointments" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "status" "text" NOT NULL,
     "notes" "text",
-    CONSTRAINT "appointments_status_check" CHECK (("status" = ANY (ARRAY['scheduled'::"text", 'cancelled'::"text", 'completed'::"text"])))
+    CONSTRAINT "appointments_status_check" CHECK (("status" = ANY (ARRAY['pending'::"text", 'scheduled'::"text", 'cancelled'::"text", 'completed'::"text"])))
 );
 
 
