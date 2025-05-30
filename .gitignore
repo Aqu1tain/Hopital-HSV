@@ -40,3 +40,12 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+android/
+ios/
+.vscode/
+.idea/
+android/
+ios/
+.vscode/
+.idea/

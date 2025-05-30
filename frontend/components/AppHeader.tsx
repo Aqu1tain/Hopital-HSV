@@ -1,49 +1,40 @@
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Bell } from 'lucide-react-native';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../app/auth-context';
+import { useUserData } from '../hooks/useUserData';
 
 interface AppHeaderProps {
   showNotificationBadge?: boolean;
 }
 
 export default function AppHeader({ showNotificationBadge = true }: AppHeaderProps) {
-  const [userInfo, setUserInfo] = useState({ firstName: '', lastName: '', role: '' });
+  const { logout } = useAuth();
+  const { user, isLoading } = useUserData();
+  const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
-    loadUserInfo();
-    if (showNotificationBadge) {
+    if (showNotificationBadge && user) {
       fetchNotificationCount();
     }
-  }, [showNotificationBadge]);
-
-  const loadUserInfo = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (userData) {
-        const parsed = JSON.parse(userData);
-        setUserInfo(parsed);
-      }
-    } catch (error) {
-      console.error('Error loading user info:', error);
-    }
-  };
+  }, [showNotificationBadge, user]);
 
   const fetchNotificationCount = async () => {
     try {
       const token = await AsyncStorage.getItem('authToken');
       const userData = await AsyncStorage.getItem('userData');
       const role = userData ? JSON.parse(userData).role : 'patient';
-      
+
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/count`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setNotificationCount(data.count);
@@ -54,29 +45,72 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
   };
 
   const handleBellPress = () => {
-    if (userInfo.role === 'practitioner') {
+    const role = user?.role || 'patient';
+    if (role === 'practitioner') {
       router.push('/(practitioner-tabs)/notifications');
     } else {
       router.push('/(tabs)/notifications');
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.header}>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.headerGreeting}>Bonjour</Text>
+          <Text style={styles.headerName}>
+            <Text style={{ fontWeight: 'bold', fontFamily: 'Inter-Bold' }}>Chargement...</Text>
+          </Text>
+        </View>
+        <View style={styles.rightSection}>
+          <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
+            <Bell color="#222" size={22} style={styles.bellIcon} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.header}>
       <View style={styles.headerTextContainer}>
-        <Text style={styles.headerGreeting}>Bonjour,</Text>
-        <Text style={styles.headerName}>
-          Valentin Lamouche
-        </Text>
-      </View>
-      <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
-        <Bell color="#222" size={22} />
-        {showNotificationBadge && notificationCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{notificationCount}</Text>
+        {user ? (
+          <View>
+            <Text style={styles.headerGreeting}>Bonjour</Text>
+            <Text style={styles.headerName}>
+              <Text style={{ fontWeight: 'bold', fontFamily: 'Inter-Bold' }}>
+                {user.first_name || user.email.split('@')[0]}{' '}
+                {user.last_name ? user.last_name.toUpperCase() : ''}
+              </Text>
+            </Text>
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.headerGreeting}>Bonjour</Text>
+            <Text style={styles.headerName}>
+              <Text style={{ fontWeight: 'bold', fontFamily: 'Inter-Bold' }}>Invité</Text>
+            </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </View>
+      <View style={styles.rightSection}>
+        {!user ? (
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={() => router.push('/auth')}
+          >
+            <Text style={styles.loginText}>Se connecter</Text>
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
+          <Bell color="#222" size={22} style={styles.bellIcon} />
+          {showNotificationBadge && notificationCount > 0 && user ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{notificationCount}</Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -86,7 +120,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16,
+    paddingTop: 26, // for safe area
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: '#fff',
@@ -129,5 +163,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     fontFamily: 'Inter-Bold',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loginButton: {
+    padding: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 5,
+  },
+  loginText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  bellIcon: {
+    marginLeft: 16,
   },
 });

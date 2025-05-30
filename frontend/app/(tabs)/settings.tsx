@@ -1,5 +1,7 @@
-import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, TextInput, Switch } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, Dimensions, TouchableOpacity, TextInput, Switch, ActivityIndicator, Alert, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/app/auth-context';
+import config from '@/config/config';
 
 interface TextProps {
   textView: string;
@@ -33,6 +35,7 @@ const Texte: React.FC<TextProps> = ({ textView, textSecondaryView, onChangeText,
               value={textSecondaryView}
               onChangeText={onChangeText}
               autoCapitalize="none"
+              secureTextEntry={textView.includes('Mot de passe') || textView.includes('Confirmer')}
             />
             {error && <Text style={styles.errorText}>{error}</Text>}
           </>
@@ -63,25 +66,62 @@ const Texte: React.FC<TextProps> = ({ textView, textSecondaryView, onChangeText,
 };
 
 export default function SettingsScreen() {
+  const { token } = useAuth();
   const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [accountData, setAccountData] = useState({
-    email: 'valentin.lamouche@mail.com',
-    password: '',
-    confirmPassword: '',
+    email: '',
+    first_name: '',
+    last_name: '',
+    profile_url: '',
   });
   const [privacyData, setPrivacyData] = useState({
     dataSharing: true,
-    twoFactorAuth: false,
   });
   const [errors, setErrors] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
   });
+
+  // Fetch user data from the /me endpoint
+  const fetchUserData = async () => {
+    if (!token) return;
+
+    try {
+      setDataLoading(true);
+      const response = await fetch(`${config.API_URL}/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Échec de la récupération des données utilisateur');
+      }
+
+      const data = await response.json();
+      setAccountData({
+        email: data.email || '',
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        profile_url: data.profile_url || '',
+      });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données:', error);
+      Alert.alert('Erreur', 'Impossible de charger les données utilisateur');
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, [token]);
 
   const validateFields = () => {
     let isValid = true;
-    const newErrors = { email: '', password: '', confirmPassword: '' };
+    const newErrors = { email: '' };
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,56 +130,110 @@ export default function SettingsScreen() {
       isValid = false;
     }
 
-    // Password validation
-    if (accountData.password.length < 8) {
-      newErrors.password = 'Minimum 8 caractères';
-      isValid = false;
-    }
-    if (accountData.password !== accountData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-      isValid = false;
+    if (isEditingAccount && accountData.email) {
+      if (accountData.email.length < 8) {
+        newErrors.email = 'Minimum 8 caractères';
+        isValid = false;
+      }
     }
 
     setErrors(newErrors);
     return isValid;
   };
 
-  const handleEditAccountToggle = () => {
-    if (isEditingAccount && validateFields()) {
-      // Save data (e.g., to backend or AsyncStorage)
+  const updateAccountData = async () => {
+    if (!validateFields()) {
+      Alert.alert('Erreur', 'Veuillez corriger les erreurs dans les champs avant de sauvegarder');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const updateData: { email?: string } = {};
+      if (accountData.email) updateData.email = accountData.email;
+
+      // Update user data via /api/users/update
+      if (updateData.email) {
+        const response = await fetch(`${config.API_URL}/api/users/update`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        if (!response.ok) {
+          throw new Error('Échec de la mise à jour des données');
+        }
+      }
+
+      await fetchUserData(); // Refresh data after update
       setIsEditingAccount(false);
-    } else if (!isEditingAccount) {
+      Alert.alert('Succès', 'Vos informations ont été mises à jour');
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error);
+      Alert.alert('Erreur', 'Impossible de mettre à jour les données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditAccountToggle = () => {
+    if (isEditingAccount) {
+      updateAccountData();
+    } else {
       setIsEditingAccount(true);
     }
   };
 
   const handleSwitchToggle = (key: keyof typeof privacyData) => {
     setPrivacyData({ ...privacyData, [key]: !privacyData[key] });
+    // Note: If privacy settings need to be persisted, add an API call here.
+    // Currently, the schema doesn't include these fields, so they remain local.
   };
+
+  if (dataLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007BFF" />
+        <Text style={styles.loadingText}>Chargement des données...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.imageWrapper}>
           <Image
-            source={require('@/assets/images/pdp.png')}
+            source={
+              accountData.profile_url && accountData.profile_url !== 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png'
+                ? { uri: accountData.profile_url }
+                : require('@/assets/images/pdp.png')
+            }
             style={styles.image}
           />
-          <Text style={styles.pseudo}>Valentin LAMOUCHE</Text>
+          <Text style={styles.pseudo}>
+            {accountData.first_name && accountData.last_name
+              ? `${accountData.first_name} ${accountData.last_name}`
+              : 'Utilisateur'}
+          </Text>
         </View>
         <View style={styles.container}>
           <View style={styles.section}>
             <View style={styles.headerContainer}>
               <Text style={styles.titre}>Compte</Text>
-              {!isEditingAccount && (
-                <TouchableOpacity
-                  style={styles.editButton}
-                  onPress={handleEditAccountToggle}
-                >
-                  <Text style={styles.penIcon}>✎</Text>
-                  <Text style={styles.editText}>Modifier</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={handleEditAccountToggle}
+                disabled={loading}
+              >
+                <Text style={styles.penIcon}>✎</Text>
+                <Text style={[styles.editText, isEditingAccount && styles.editTextActive]}>
+                  {loading ? 'Enregistrement...' : isEditingAccount ? 'Enregistrer' : 'Modifier'}
+                </Text>
+              </TouchableOpacity>
             </View>
             {[
               {
@@ -147,18 +241,6 @@ export default function SettingsScreen() {
                 value: accountData.email,
                 onChange: (text: string) => setAccountData({ ...accountData, email: text }),
                 error: errors.email,
-              },
-              {
-                textView: 'Mot de passe : ',
-                value: accountData.password,
-                onChange: (text: string) => setAccountData({ ...accountData, password: text }),
-                error: errors.password,
-              },
-              {
-                textView: 'Confirmer mot de passe : ',
-                value: accountData.confirmPassword,
-                onChange: (text: string) => setAccountData({ ...accountData, confirmPassword: text }),
-                error: errors.confirmPassword,
               },
             ].map((item, index) => (
               <Texte
@@ -170,18 +252,9 @@ export default function SettingsScreen() {
                 error={item.error}
               />
             ))}
-            {isEditingAccount && (
-              <TouchableOpacity
-                style={styles.editButton}
-                onPress={handleEditAccountToggle}
-              >
-                <Text style={styles.penIcon}>✎</Text>
-                <Text style={[styles.editText, styles.editTextActive]}>Enregistrer</Text>
-              </TouchableOpacity>
-            )}
           </View>
           <View style={styles.sectionSeparator} />
-          <View style={styles.section}>
+          <View style={[styles.section, { display: 'none' }]}>
             <View style={styles.headerContainer}>
               <Text style={styles.titre}>Confidentialité et Sécurité</Text>
             </View>
@@ -191,12 +264,6 @@ export default function SettingsScreen() {
                 value: privacyData.dataSharing ? 'Activé' : 'Désactivé',
                 switchValue: privacyData.dataSharing,
                 onSwitch: () => handleSwitchToggle('dataSharing'),
-              },
-              {
-                textView: 'Authentification à deux facteurs : ',
-                value: privacyData.twoFactorAuth ? 'Activé' : 'Désactivé',
-                switchValue: privacyData.twoFactorAuth,
-                onSwitch: () => handleSwitchToggle('twoFactorAuth'),
               },
             ].map((item, index) => (
               <View key={index} style={styles.textContainer}>
@@ -288,18 +355,18 @@ const styles = StyleSheet.create({
     fontStyle: 'normal',
     fontWeight: '600',
     fontFamily: 'Inter',
-    width: width * 0.5, // Fixed width for consistent label alignment
+    width: width * 0.5,
   },
   infoContainer: {
     flex: 1,
-    flexDirection: 'column', // Changed to column to stack TextInput and error text
-    alignItems: 'flex-end', // Align content to the right
+    flexDirection: 'column',
+    alignItems: 'flex-end',
   },
   textWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    minWidth: 140, // Consistent width for alignment
+    minWidth: 140,
   },
   textSecondary: {
     color: '#000',
@@ -320,8 +387,8 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'transparent',
     textAlign: 'right',
-    minWidth: 140, // Match textWrapper minWidth for alignment
-    width: '100%', // Ensure it takes available space
+    minWidth: 140,
+    width: '100%',
   },
   textInputError: {
     borderColor: '#FF0000',
@@ -331,7 +398,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter',
     textAlign: 'right',
-    marginTop: 4, // Position closer to the input
+    marginTop: 4,
     width: '100%',
   },
   ellipsis: {
@@ -363,5 +430,17 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     borderWidth: 3,
     borderColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 8,
+    fontFamily: 'Inter',
   },
 });
