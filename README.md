@@ -23,9 +23,8 @@ L'application mobile HSV simplifie la gestion des rendez-vous médicaux pour l'H
 
 ### À venir
 
-* **Notifications** : rappels automatiques des rendez-vous.
-* **Portail Praticien** : gestion autonome des consultations par les médecins.
 * **Améliorations UI/UX** : optimisation continue pour une expérience utilisateur optimale.
+* **Bugs** : résolution des bugs. Si vous en trouvez n'hésitez pas à soumettre une Issue sur le dépôt GitHub.
 
 ## 📁 Structure du projet
 
@@ -62,6 +61,17 @@ Importez le fichier `schema.sql` depuis le dossier `supabase/` dans votre instan
 
 Créez un fichier `.env` dans le dossier `backend/` avec les variables de .env.example.
 
+## 📝 Remarques
+
+Si vous ouvrir l'application sur mobile (avec expo go), vous devez modifier le fichier frontent/config/config.ts pour utiliser l'adresse IP de votre machine.
+
+```tsx
+ const dev: EnvironmentConfig = {
+    API_URL: 'http://localhost:3000',
+  };
+```
+
+*Remplacez localhost par l'adresse IP de votre machine*
 
 ## 🤝 Équipe de développement
 
