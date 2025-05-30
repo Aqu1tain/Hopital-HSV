@@ -387,7 +387,7 @@ export default function PractitionerDetailScreen() {
         {/* Header Section with Image Background */}
         <View style={styles.headerSection}>
           <Image
-            source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Bateau_Lavoir_01.jpg/1200px-Bateau_Lavoir_01.jpg' }}
+            source={{ uri: 'https://my.alfred.edu/zoom/_images/foster-lake.jpg' }}
             style={styles.backgroundImage}
           />
           <View style={styles.profileOverlay}>
