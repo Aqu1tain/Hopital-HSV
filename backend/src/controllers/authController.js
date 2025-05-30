@@ -92,84 +92,82 @@ export async function signupPatient(req, res) {
   return res.json({ token, user: { id: user.id, role: 'patient' } });
 }
 
-export async function signupPractitioner(req, res) {
-  const {
-    email, phone, first_name, last_name, title,
-    street_address, postal_code, city, floor, building_code,
-    public_transport_access,
-    payment_card, payment_bank_transfer,
-    payment_cheque, payment_cash,
-    accepts_mutuelle, conventioned,
-    standard_price_cents, secu_coverage_percent,
-  } = req.body;
-
-  if (!email || !first_name || !last_name || !req.file) {
-    return res
-      .status(400)
-      .json({ error: 'email, prénom, nom et preuve sont obligatoires' });
-  }
-
-  try {
-    // 1) Create user record
-    const { data: user, error: uErr } = await supabase
-      .from('users')
-      .insert([
-        { email, phone, first_name, last_name, role: 'practitioner' }
-      ])
-      .select('id')
-      .single();
-    if (uErr) throw uErr;
-
-    // 2) Upload proof file to Storage
-    const path = `practitioners/${user.id}/${req.file.originalname}`;
-    const { error: upErr } = await supabase.storage
-      .from('proofs')
-      .upload(path, req.file.buffer, {
-        contentType: req.file.mimetype,
+export async function signupPractitioner(req, res) {  
+    const {
+      email, phone, first_name, last_name, title,
+      street_address, postal_code, city, floor, building_code,
+      public_transport_access,
+      payment_card, payment_bank_transfer,
+      payment_cheque, payment_cash,
+      payment_mutuelle,
+      conventioned,
+      standard_price_cents, secu_coverage_percent,
+    } = req.body;
+  
+    if (!email || !first_name || !last_name) {
+      return res
+        .status(400)
+        .json({ error: 'email, prénom et nom sont obligatoires' });
+    }
+  
+    try {
+      // 1) Create user record
+      const { data: user, error: uErr } = await supabase
+        .from('users')
+        .insert([
+          { email, phone, first_name, last_name, role: 'practitioner' }
+        ])
+        .select('id')
+        .single();
+      if (uErr) {
+        console.error('User creation error:', uErr);
+        throw uErr;
+      }
+  
+      console.log('User created successfully:', user);
+  
+      // 2) Insert practitioner profile (no file upload needed)
+      const { error: pErr } = await supabase
+        .from('practitioners')
+        .insert([
+          {
+            user_id: user.id,
+            title,
+            street_address,
+            postal_code,
+            city,
+            floor,
+            building_code,
+            public_transport_access,
+            payment_card: payment_card === 'true' || payment_card === true,
+            payment_bank_transfer: payment_bank_transfer === 'true' || payment_bank_transfer === true,
+            payment_cheque: payment_cheque === 'true' || payment_cheque === true,
+            payment_cash: payment_cash === 'true' || payment_cash === true,
+            accepts_mutuelle: payment_mutuelle === 'true' || payment_mutuelle === true,
+            conventioned: conventioned === 'true' || conventioned === true,
+            standard_price_cents: standard_price_cents ? Number(standard_price_cents) : null,
+            secu_coverage_percent: secu_coverage_percent ? Number(secu_coverage_percent) : null,
+            verification_documents: [], // Empty array, no documents
+            is_verified: false, // Can be manually verified later by admin
+          },
+        ]);
+      if (pErr) {
+        console.error('Practitioner creation error:', pErr);
+        throw pErr;
+      }
+  
+      console.log('Practitioner profile created successfully');
+  
+      return res.json({
+        message: "Inscription praticien réussie ! Votre profil a été créé et est en attente de validation.",
       });
-    if (upErr) throw upErr;
-    const { data: urlData } = supabase.storage
-      .from('proofs')
-      .getPublicUrl(path);
-
-    // 3) Insert practitioner profile, unverified
-    const { error: pErr } = await supabase
-      .from('practitioners')
-      .insert([
-        {
-          user_id: user.id,
-          title,
-          street_address,
-          postal_code,
-          city,
-          floor,
-          building_code,
-          public_transport_access,
-          payment_card: payment_card === 'true',
-          payment_bank_transfer: payment_bank_transfer === 'true',
-          payment_cheque: payment_cheque === 'true',
-          payment_cash: payment_cash === 'true',
-          accepts_mutuelle: accepts_mutuelle === 'true',
-          conventioned: conventioned === 'true',
-          standard_price_cents: Number(standard_price_cents),
-          secu_coverage_percent: Number(secu_coverage_percent),
-          verification_documents: [urlData.publicUrl],
-          is_verified: false,
-        },
-      ]);
-    if (pErr) throw pErr;
-
-    return res.json({
-      message:
-        "Inscription praticien reçue ! Votre dossier est en attente de validation.",
-    });
-  } catch (err) {
-    console.error('Signup practitioner error:', err);
-    return res.status(500).json({
-      error: err.message || 'Erreur interne lors de l\'inscription',
-    });
+    } catch (err) {
+      console.error('Signup practitioner error:', err);
+      return res.status(500).json({
+        error: err.message || 'Erreur interne lors de l\'inscription',
+      });
+    }
   }
-}
 
 // Route: redirection selon rôle
 export function redirectHome(req, res) {

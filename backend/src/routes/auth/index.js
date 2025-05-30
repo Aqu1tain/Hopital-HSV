@@ -19,7 +19,7 @@ router.post('/verify', verifyOtp);
 
 // Signup routes
 router.post('/signup/patient', signupPatient);
-router.post('/signup/practitioner', upload.single('proof'), signupPractitioner);
+router.post('/signup/practitioner', signupPractitioner);
 
 // Protected routes
 router.get('/redirect-home', authMiddleware, redirectHome);

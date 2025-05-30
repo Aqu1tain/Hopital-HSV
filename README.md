@@ -60,6 +60,9 @@ npx expo start
 
 Importez le fichier `schema.sql` depuis le dossier `supabase/` dans votre instance Supabase.
 
+Créez un fichier `.env` dans le dossier `backend/` avec les variables de .env.example.
+
+
 ## 🤝 Équipe de développement
 
 * Corentin Renard ([Aqu1tain](https://github.com/Aqu1tain))

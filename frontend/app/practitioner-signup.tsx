@@ -12,11 +12,12 @@ import {
   Switch,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
 
 import config from '../config/config';
 
 export default function PractitionerSignup() {
+  const router = useRouter();
   const [fields, setFields] = useState({
     email: '',
     phone: '',
@@ -38,49 +39,38 @@ export default function PractitionerSignup() {
     standard_price_cents: '',
     secu_coverage_percent: '',
   });
-  const [proof, setProof] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const pickProof = async () => {
-    const res = await DocumentPicker.getDocumentAsync({ type: '*/*' });
-    if (!res.canceled && res.assets && res.assets.length > 0) {
-      setProof(res.assets[0]);
-    }
-  };
-
-
   const handleSubmit = async () => {
     setError('');
     setSuccess('');
-    if (!fields.email || !fields.first_name || !fields.last_name || !proof) {
+    if (!fields.email || !fields.first_name || !fields.last_name) {
       setError('Les champs marqués * sont obligatoires');
       return;
     }
     setLoading(true);
     try {
-      const formData = new FormData();
-      Object.entries(fields).forEach(([k, v]) =>
-        formData.append(k, typeof v === 'boolean' ? (v ? 'true' : 'false') : v as string)
-      );
-      formData.append('proof', {
-        uri: proof.uri,
-        name: proof.name,
-        type: proof.mimeType || 'application/octet-stream',
-      } as any);
-
-      const res = await fetch(`${config.API_URL}/signup/practitioner`, {
+      const res = await fetch(`${config.API_URL}/auth/signup/practitioner`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify(fields),
       });
+      
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur lors de l’inscription');
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'inscription');
+      
       setSuccess(data.message || 'Inscription réussie !');
+      
+      // Redirect to home page after successful signup
+      setTimeout(() => {
+        router.push('/');
+      }, 2000); // Wait 2 seconds to show success message
+      
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -284,27 +274,17 @@ export default function PractitionerSignup() {
         </View>
       </View>
 
-      <View style={styles.formGroup}>
-        <Text style={styles.label}>Preuve *</Text>
-        <TouchableOpacity style={styles.uploadBtn} onPress={pickProof}>
-          <Text style={styles.uploadText}>
-            {proof ? proof.name : 'Téléverser document de preuve'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <TouchableOpacity
-        style={[styles.cta, !fields.email || !fields.first_name || !fields.last_name || !proof ? styles.disabled : null]}
+        style={[styles.cta, !fields.email || !fields.first_name || !fields.last_name ? styles.disabled : null]}
         onPress={handleSubmit}
-        disabled={loading || !fields.email || !fields.first_name || !fields.last_name || !proof}
+        disabled={loading || !fields.email || !fields.first_name || !fields.last_name}
       >
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.ctaText}>S’inscrire</Text>
+          <Text style={styles.ctaText}>S'inscrire</Text>
         )}
       </TouchableOpacity>
-
 
     </ScrollView>
   );
@@ -372,18 +352,6 @@ const styles = StyleSheet.create({
   switchLabel: {
     marginLeft: 6,
     fontSize: 14,
-  },
-  uploadBtn: {
-    borderWidth: 1,
-    borderColor: '#CCC',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-    backgroundColor: '#F4F4F4',
-  },
-  uploadText: {
-    color: '#666',
   },
   cta: {
     height: 50,
