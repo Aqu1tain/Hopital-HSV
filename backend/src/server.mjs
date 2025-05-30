@@ -1316,6 +1316,256 @@ app.patch('/api/practitioners/update', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erreur interne du serveur' });
   }
 });
+
+// Get notifications for patients
+app.get('/api/notifications/patient', authMiddleware, async (req, res) => {
+  console.log(req.user);
+  const userId = req.user.sub;
+  
+  try {
+    // Get appointments and their status changes
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        practitioner:practitioners(
+          user:users(first_name, last_name, profile_url)
+        )
+      `)
+      .eq('patient_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform appointments into notifications
+    const notifications = appointments.map(apt => {
+      const practitionerName = `Dr. ${apt.practitioner.user.last_name}`;
+      const scheduledDate = new Date(apt.scheduled_at);
+      const time = scheduledDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      
+      // Determine section (Today, Yesterday, etc.)
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      let section = '';
+      if (scheduledDate.toDateString() === today.toDateString()) {
+        section = "Aujourd'hui";
+      } else if (scheduledDate.toDateString() === yesterday.toDateString()) {
+        section = 'Hier';
+      } else {
+        section = scheduledDate.toLocaleDateString('fr-FR');
+      }
+
+      // Create message based on status
+      let messageParts = [];
+      let cancellable = false;
+      let read = false;
+
+      if (apt.status === 'scheduled') {
+        messageParts = [
+          { text: 'Le ', bold: false },
+          { text: practitionerName, bold: true },
+          { text: ` a accepté votre demande de rendez-vous pour ${time}`, bold: false }
+        ];
+        cancellable = true;
+      } else if (apt.status === 'cancelled') {
+        messageParts = [
+          { text: practitionerName, bold: true },
+          { text: ` a annulé le rendez-vous prévu à ${time}`, bold: false }
+        ];
+        read = true;
+      }
+
+      return {
+        id: apt.id,
+        section,
+        time: new Date(apt.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        messageParts,
+        cancellable,
+        read
+      };
+    });
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching patient notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// Get notifications for practitioners
+app.get('/api/notifications/practitioner', authMiddleware, async (req, res) => {
+  const userId = req.user.sub;
+  
+  try {
+    // Get appointments for this practitioner
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        patient:patients(
+          user:users(first_name, last_name, profile_url)
+        )
+      `)
+      .eq('practitioner_id', userId)
+      .order('scheduled_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform appointments into notification format
+    const notifications = appointments.map(apt => {
+      const patientName = `M. ${apt.patient.user.first_name} ${apt.patient.user.last_name}`;
+      const scheduledDate = new Date(apt.scheduled_at);
+      const time = scheduledDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      
+      // Determine section
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      let section = '';
+      let date = '';
+      if (scheduledDate.toDateString() === today.toDateString()) {
+        section = "Aujourd'hui";
+        date = "aujourd'hui";
+      } else if (scheduledDate.toDateString() === yesterday.toDateString()) {
+        section = 'Hier';
+        date = "hier";
+      } else {
+        section = scheduledDate.toLocaleDateString('fr-FR');
+        date = `le ${scheduledDate.toLocaleDateString('fr-FR')}`;
+      }
+
+      return {
+        id: apt.id,
+        patientName,
+        patientAvatar: apt.patient.user.profile_url,
+        time,
+        date,
+        status: apt.status === 'scheduled' ? 'accepted' : apt.status,
+        section
+      };
+    });
+
+    res.json(notifications);
+  } catch (error) {
+    console.error('Error fetching practitioner notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// Get notification count
+app.get('/api/notifications/count', authMiddleware, async (req, res) => {
+  const userId = req.user.sub;
+  const role = req.user.role;
+  
+  try {
+    let count = 0;
+    
+    if (role === 'patient') {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('patient_id', userId)
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', new Date().toISOString());
+      
+      if (!error && data) count = data.length;
+    } else if (role === 'practitioner') {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('practitioner_id', userId)
+        .eq('status', 'pending');
+      
+      if (!error && data) count = data.length;
+    }
+    
+    res.json({ count });
+  } catch (error) {
+    console.error('Error fetching notification count:', error);
+    res.status(500).json({ error: 'Failed to fetch count' });
+  }
+});
+
+// Cancel appointment notification
+app.post('/api/notifications/:id/cancel', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.sub;
+  
+  try {
+    // Update appointment status
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('patient_id', userId);
+    
+    if (error) throw error;
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error cancelling appointment:', error);
+    res.status(500).json({ error: 'Failed to cancel appointment' });
+  }
+});
+
+// Mark all notifications as read (patient)
+app.post('/api/notifications/mark-all-read', authMiddleware, async (req, res) => {
+  // In a real implementation, you might have a separate notifications table
+  // For now, we'll just return success
+  res.json({ success: true });
+});
+
+// Accept appointment (practitioner)
+app.post('/api/appointments/:id/accept', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.sub;
+  
+  try {
+    // Update appointment status to scheduled
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'scheduled' })
+      .eq('id', id)
+      .eq('practitioner_id', userId);
+    
+    if (error) throw error;
+    
+    // TODO: Send notification to patient about accepted appointment
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error accepting appointment:', error);
+    res.status(500).json({ error: 'Failed to accept appointment' });
+  }
+});
+
+// Reject appointment (practitioner)
+app.post('/api/appointments/:id/reject', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.sub;
+  
+  try {
+    // Update appointment status to cancelled
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('practitioner_id', userId);
+    
+    if (error) throw error;
+    
+    // TODO: Send notification to patient about rejected appointment
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error rejecting appointment:', error);
+    res.status(500).json({ error: 'Failed to reject appointment' });
+  }
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

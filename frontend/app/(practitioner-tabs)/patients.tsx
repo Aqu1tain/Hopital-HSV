@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Phone, User } from 'lucide-react-native';
 import { useAuth } from '../auth-context';
-import config from '../../config/config';
+import config from '@/config/config';
 import AppHeader from '@/components/AppHeader';
 
 // Theme for consistent styling (same as planning.tsx)

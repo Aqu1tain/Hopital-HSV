@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { Check, X } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import config from '@/config/config';
+import { useAuth } from '@/app/auth-context';
 
 interface Notification {
   id: string;
@@ -49,6 +50,7 @@ const NotificationItem: React.FC<{
 );
 
 export default function NotificationsScreen() {
+  const { token } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,8 +60,7 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/patient`, {
+      const response = await fetch(`${config.API_URL}/api/notifications/patient`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -79,8 +80,7 @@ export default function NotificationsScreen() {
 
   const handleCancel = async (notificationId: string) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/${notificationId}/cancel`, {
+      const response = await fetch(`${config.API_URL}/api/notifications/${notificationId}/cancel`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -99,8 +99,7 @@ export default function NotificationsScreen() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/mark-all-read`, {
+      const response = await fetch(`${config.API_URL}/api/notifications/mark-all-read`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
