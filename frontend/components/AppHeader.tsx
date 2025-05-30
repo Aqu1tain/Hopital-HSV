@@ -1,40 +1,60 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Bell } from 'lucide-react-native';
-import { router, useRouter } from 'expo-router';
+import { Bell, BellRing } from 'lucide-react-native'; // Add BellRing for filled bell
+import { router, useRouter, usePathname } from 'expo-router'; // Add usePathname
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../app/auth-context';
 import { useUserData } from '../hooks/useUserData';
+import config from '../config/config'; // Use your config instead of process.env
 
 interface AppHeaderProps {
   showNotificationBadge?: boolean;
 }
 
 export default function AppHeader({ showNotificationBadge = true }: AppHeaderProps) {
-  const { logout } = useAuth();
+  const { token } = useAuth();
   const { user, isLoading } = useUserData();
   const router = useRouter();
+  const pathname = usePathname(); // Add this to detect current route
   const [notificationCount, setNotificationCount] = useState(0);
+
+  // Check if we're on notifications page
+  const isOnNotificationsPage = pathname === '/notifications' || 
+                                pathname === '/(tabs)/notifications' || 
+                                pathname === '/(practitioner-tabs)/notifications';
 
   useEffect(() => {
     if (showNotificationBadge && user) {
+      console.log('Fetching notification count...');
       fetchNotificationCount();
+      
+      // Refresh notification count every 30 seconds when not on notifications page
+      if (!isOnNotificationsPage) {
+        const interval = setInterval(fetchNotificationCount, 10000);
+        return () => clearInterval(interval);
+      }
     }
-  }, [showNotificationBadge, user]);
+  }, [showNotificationBadge, user, isOnNotificationsPage]);
+
+  // Reset notification count when on notifications page
+  useEffect(() => {
+    if (isOnNotificationsPage && notificationCount > 0) {
+      setNotificationCount(0);
+    }
+  }, [isOnNotificationsPage]);
 
   const fetchNotificationCount = async () => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
-      const userData = await AsyncStorage.getItem('userData');
-      const role = userData ? JSON.parse(userData).role : 'patient';
+      if (!token) return;
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/count`, {
+      const response = await fetch(`${config.API_URL}/api/notifications/count`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-
+      console.log('Response:', response);
+  
       if (response.ok) {
         const data = await response.json();
         setNotificationCount(data.count);
@@ -64,7 +84,11 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
         </View>
         <View style={styles.rightSection}>
           <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
-            <Bell color="#222" size={22} style={styles.bellIcon} />
+            {isOnNotificationsPage ? (
+              <BellRing color="#222" size={22} style={styles.bellIcon} />
+            ) : (
+              <Bell color="#222" size={22} style={styles.bellIcon} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -103,10 +127,16 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
-          <Bell color="#222" size={22} style={styles.bellIcon} />
-          {showNotificationBadge && notificationCount > 0 && user ? (
+          {isOnNotificationsPage ? (
+            <BellRing color="#222" size={22} style={styles.bellIcon} />
+          ) : (
+            <Bell color="#222" size={22} style={styles.bellIcon} />
+          )}
+          {showNotificationBadge && notificationCount > 0 && user && !isOnNotificationsPage ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{notificationCount}</Text>
+              <Text style={styles.badgeText}>
+                {notificationCount > 99 ? '99+' : notificationCount.toString()}
+              </Text>
             </View>
           ) : null}
         </TouchableOpacity>

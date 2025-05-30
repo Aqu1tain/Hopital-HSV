@@ -1,90 +1,145 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Image, Alert } from 'react-native';
 import { Check, X, Filter } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AppHeader from '../../components/AppHeader';
 import config from '@/config/config';
 import { useAuth } from '@/app/auth-context';
 
-interface AppointmentRequest {
+interface PractitionerNotification {
   id: string;
-  patientName: string;
-  patientAvatar?: string;
-  time: string;
-  date: string;
-  status: 'pending' | 'scheduled' | 'rejected' | 'cancelled';
+  appointment_id?: string;
   section: string;
+  time: string;
+  title: string;
+  message: string;
+  type: 'appointment_request' | 'appointment_accepted' | 'appointment_rejected' | 'appointment_cancelled';
+  is_read: boolean;
+  created_at: string;
+  patientName?: string;
+  patientAvatar?: string;
+  status: string;
+  scheduledAt?: string;
 }
 
-const AppointmentRequestItem: React.FC<{
-  item: AppointmentRequest;
+const NotificationItem: React.FC<{
+  item: PractitionerNotification;
   showSectionHeader?: boolean;
-  onAccept: (id: string) => void;
-  onReject: (id: string) => void;
-}> = ({ item, showSectionHeader, onAccept, onReject }) => {
-  const getStatusIcon = () => {
-    switch (item.status) {
-      case 'scheduled':
-        return <View style={styles.statusIcon}><Check color="#34C759" size={20} /></View>;
-      case 'rejected':
-      case 'cancelled':
-        return <View style={styles.statusIcon}><X color="#FF3B30" size={20} /></View>;
-      default:
-        return null;
+  onAccept: (appointmentId: string) => void;
+  onReject: (appointmentId: string) => void;
+  onMarkRead: (id: string) => void;
+}> = ({ item, showSectionHeader, onAccept, onReject, onMarkRead }) => {
+  
+  const handleAcceptPress = () => {
+    if (!item.appointment_id) return;
+    Alert.alert(
+      'Accepter le rendez-vous',
+      `Confirmer le rendez-vous avec ${item.patientName} ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Accepter', 
+          onPress: () => onAccept(item.appointment_id!)
+        }
+      ]
+    );
+  };
+
+  const handleRejectPress = () => {
+    if (!item.appointment_id) return;
+    Alert.alert(
+      'Refuser le rendez-vous',
+      `Refuser le rendez-vous avec ${item.patientName} ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Refuser', 
+          style: 'destructive',
+          onPress: () => onReject(item.appointment_id!)
+        }
+      ]
+    );
+  };
+
+  const isPendingRequest = item.type === 'appointment_request' && item.status === 'pending';
+  const isAccepted = item.status === 'scheduled';
+  const isCancelled = item.status === 'cancelled';
+
+  // Extract time from message for pending requests
+  const extractTimeFromMessage = (message: string) => {
+    const timeMatch = message.match(/à (\d{2}h\d{2})/);
+    return timeMatch ? timeMatch[1] : '';
+  };
+
+  const getStatusText = () => {
+    if (isPendingRequest) {
+      const timeStr = extractTimeFromMessage(item.message);
+      return `a demandé un rendez vous à ${timeStr} aujourd'hui`;
+    } else if (isAccepted) {
+      const timeStr = extractTimeFromMessage(item.message);
+      return `a rendez vous à ${timeStr} aujourd'hui`;
+    } else if (isCancelled) {
+      return item.message;
     }
+    return item.message;
   };
 
   return (
-    <View style={styles.requestContainer}>
+    <View style={styles.notificationContainer}>
       {showSectionHeader && <Text style={styles.sectionHeader}>{item.section}</Text>}
-      <View style={styles.requestItem}>
+      <TouchableOpacity 
+        style={styles.notification}
+        onPress={() => !item.is_read && onMarkRead(item.id)}
+      >
         <Image 
-          source={{ uri: item.patientAvatar || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png' }}
+          source={{ 
+            uri: item.patientAvatar || 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Default_pfp.svg/340px-Default_pfp.svg.png' 
+          }}
           style={styles.avatar}
         />
-        <View style={styles.requestContent}>
+        
+        <View style={styles.notificationContent}>
           <Text style={styles.patientName}>{item.patientName}</Text>
-          <Text style={styles.requestText}>
-            {item.status === 'pending' && `a demandé un rendez vous à ${item.time} ${item.date}`}
-            {item.status === 'scheduled' && `a rendez vous à ${item.time} ${item.date}`}
-            {item.status === 'rejected' && `avait rendez-vous ${item.date} à ${item.time}`}
-            {item.status === 'cancelled' && `a annulé son rendez vous prévu ${item.date} à ${item.time}`}
-          </Text>
+          <Text style={styles.statusText}>{getStatusText()}</Text>
         </View>
-        {item.status === 'pending' ? (
+        
+        {isPendingRequest ? (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={styles.acceptButton}
-              onPress={() => onAccept(item.id)}
+              onPress={handleAcceptPress}
             >
               <Text style={styles.acceptText}>Accepter</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.rejectButton}
-              onPress={() => onReject(item.id)}
+              onPress={handleRejectPress}
             >
               <Text style={styles.rejectText}>Refuser</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          getStatusIcon()
+          <View style={styles.statusIconContainer}>
+            {isAccepted && <Check color="#34C759" size={24} />}
+            {isCancelled && <X color="#FF3B30" size={24} />}
+          </View>
         )}
-      </View>
+      </TouchableOpacity>
     </View>
   );
 };
 
 export default function PractitionerNotificationsScreen() {
   const { token } = useAuth();
-  const [appointments, setAppointments] = useState<AppointmentRequest[]>([]);
+  const [notifications, setNotifications] = useState<PractitionerNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFilter, setShowFilter] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showOnlyPending, setShowOnlyPending] = useState(false);
 
-  useEffect(() => {
-    fetchAppointmentRequests();
-  }, []);
-
-  const fetchAppointmentRequests = async () => {
+  const fetchNotifications = useCallback(async (showLoading = true) => {
     try {
+      if (showLoading) setLoading(true);
+      
       const response = await fetch(`${config.API_URL}/api/notifications/practitioner`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -94,14 +149,24 @@ export default function PractitionerNotificationsScreen() {
       
       if (response.ok) {
         const data = await response.json();
-        setAppointments(data);
+        setNotifications(data);
+      } else {
+        console.error('Failed to fetch notifications:', response.status);
       }
     } catch (error) {
-      console.error('Error fetching appointment requests:', error);
+      console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [token]);
+
+  // Refresh notifications when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications();
+    }, [fetchNotifications])
+  );
 
   const handleAccept = async (appointmentId: string) => {
     try {
@@ -114,12 +179,16 @@ export default function PractitionerNotificationsScreen() {
       });
       
       if (response.ok) {
-        setAppointments(prev => prev.map(apt => 
-          apt.id === appointmentId ? { ...apt, status: 'scheduled' } : apt
-        ));
+        // Refresh notifications to get updated status
+        fetchNotifications(false);
+        Alert.alert('Succès', 'Rendez-vous accepté avec succès');
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Erreur', errorData.error || 'Impossible d\'accepter le rendez-vous');
       }
     } catch (error) {
       console.error('Error accepting appointment:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
     }
   };
 
@@ -134,21 +203,58 @@ export default function PractitionerNotificationsScreen() {
       });
       
       if (response.ok) {
-        setAppointments(prev => prev.map(apt => 
-          apt.id === appointmentId ? { ...apt, status: 'rejected' } : apt
-        ));
+        // Refresh notifications to get updated status
+        fetchNotifications(false);
+        Alert.alert('Succès', 'Rendez-vous refusé');
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Erreur', errorData.error || 'Impossible de refuser le rendez-vous');
       }
     } catch (error) {
       console.error('Error rejecting appointment:', error);
+      Alert.alert('Erreur', 'Une erreur est survenue');
     }
   };
 
-  const displayData = appointments.map((item, index) => ({
+  const handleMarkRead = async (notificationId: string) => {
+    try {
+      const response = await fetch(`${config.API_URL}/api/notifications/${notificationId}/mark-read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        // Update notification locally
+        setNotifications(prev => prev.map(n => 
+          n.id === notificationId ? { ...n, is_read: true } : n
+        ));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications(false);
+  };
+
+  // Filter notifications based on showOnlyPending
+  const filteredNotifications = showOnlyPending 
+    ? notifications.filter(n => n.type === 'appointment_request' && n.status === 'pending')
+    : notifications;
+
+  const displayData = filteredNotifications.map((item, index) => ({
     ...item,
-    showSectionHeader: index === 0 || item.section !== appointments[index - 1]?.section,
+    showSectionHeader: index === 0 || item.section !== filteredNotifications[index - 1]?.section,
   }));
 
-  if (loading) {
+  const pendingCount = notifications.filter(n => n.type === 'appointment_request' && n.status === 'pending').length;
+
+  if (loading && !refreshing) {
     return (
       <View style={styles.container}>
         <AppHeader showNotificationBadge={false} />
@@ -162,25 +268,39 @@ export default function PractitionerNotificationsScreen() {
   return (
     <View style={styles.container}>
       <AppHeader showNotificationBadge={false} />
+      
       <TouchableOpacity 
-        style={styles.filterButton}
-        onPress={() => setShowFilter(!showFilter)}
+        style={[styles.filterButton, showOnlyPending && styles.filterButtonActive]}
+        onPress={() => setShowOnlyPending(!showOnlyPending)}
       >
-        <Filter color="#666" size={18} />
-        <Text style={styles.filterText}>Afficher les demandes non répondues</Text>
+        <Filter color={showOnlyPending ? "#fff" : "#666"} size={18} />
+        <Text style={[styles.filterText, showOnlyPending && styles.filterTextActive]}>
+          Afficher les demandes non répondues
+        </Text>
       </TouchableOpacity>
+
       <FlatList
         data={displayData}
         renderItem={({ item }) => (
-          <AppointmentRequestItem
+          <NotificationItem
             item={item}
             showSectionHeader={item.showSectionHeader}
             onAccept={handleAccept}
             onReject={handleReject}
+            onMarkRead={handleMarkRead}
           />
         )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {showOnlyPending ? 'Aucune demande en attente' : 'Aucune notification'}
+            </Text>
+          </View>
+        }
       />
     </View>
   );
@@ -206,16 +326,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignSelf: 'center',
   },
+  filterButtonActive: {
+    backgroundColor: '#5671DA',
+  },
   filterText: {
     fontSize: 14,
     color: '#666',
     marginLeft: 8,
     fontFamily: 'Inter',
   },
+  filterTextActive: {
+    color: '#fff',
+  },
   listContainer: {
     paddingBottom: 20,
   },
-  requestContainer: {
+  notificationContainer: {
     paddingHorizontal: 20,
   },
   sectionHeader: {
@@ -226,7 +352,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: 'Inter-Bold',
   },
-  requestItem: {
+  notification: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
@@ -240,7 +366,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     backgroundColor: '#F0F0F0',
   },
-  requestContent: {
+  notificationContent: {
     flex: 1,
   },
   patientName: {
@@ -250,7 +376,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'Inter',
   },
-  requestText: {
+  statusText: {
     fontSize: 14,
     color: '#666',
     lineHeight: 18,
@@ -285,11 +411,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter',
   },
-  statusIcon: {
+  statusIconContainer: {
     marginLeft: 12,
     width: 24,
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Inter',
   },
 });
