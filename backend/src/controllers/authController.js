@@ -94,7 +94,7 @@ export async function signupPatient(req, res) {
 
 export async function signupPractitioner(req, res) {  
     const {
-      email, phone, first_name, last_name, title,
+      email, phone, first_name, last_name, title, specialty,
       street_address, postal_code, city, floor, building_code,
       public_transport_access,
       payment_card, payment_bank_transfer,
@@ -132,7 +132,8 @@ export async function signupPractitioner(req, res) {
         .insert([
           {
             user_id: user.id,
-            title,
+            title, // Professional title (Dr., M., Mme., etc.)
+            specialty, // Medical specialty/profession
             street_address,
             postal_code,
             city,

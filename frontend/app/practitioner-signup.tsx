@@ -23,7 +23,8 @@ export default function PractitionerSignup() {
     phone: '',
     first_name: '',
     last_name: '',
-    title: '',
+    title: '', // This should be for titles like "Dr.", "M.", "Mme.", etc.
+    specialty: '', // This should be for the profession/specialty
     street_address: '',
     postal_code: '',
     city: '',
@@ -146,20 +147,38 @@ export default function PractitionerSignup() {
               style={styles.picker}
               dropdownIconColor="#3451db"
             >
-              <Picker.Item label="Sélectionnez une profession" value="" />
-              <Picker.Item label="Médecin généraliste" value="Médecin généraliste" />
-              <Picker.Item label="Orthophoniste" value="Orthophoniste" />
-              <Picker.Item label="Infirmier/Infirmière" value="Infirmier/Infirmière" />
-              <Picker.Item label="Kinésithérapeute" value="Kinésithérapeute" />
-              <Picker.Item label="Sage-femme" value="Sage-femme" />
-              <Picker.Item label="Podologue" value="Podologue" />
-              <Picker.Item label="Psychologue" value="Psychologue" />
-              <Picker.Item label="Dentiste" value="Dentiste" />
-              <Picker.Item label="Ophtalmologue" value="Ophtalmologue" />
-              <Picker.Item label="Cardiologue" value="Cardiologue" />
-              <Picker.Item label="Autre" value="Autre" />
+              <Picker.Item label="Sélectionnez un titre" value="" />
+              <Picker.Item label="Dr." value="Dr." />
+              <Picker.Item label="M." value="M." />
+              <Picker.Item label="Mme." value="Mme." />
+              <Picker.Item label="Mlle." value="Mlle." />
             </Picker>
           </View>
+        </View>
+      </View>
+
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Spécialité</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={fields.specialty}
+            onValueChange={t => setFields(f => ({ ...f, specialty: t }))}
+            style={styles.picker}
+            dropdownIconColor="#3451db"
+          >
+            <Picker.Item label="Sélectionnez une profession" value="" />
+            <Picker.Item label="Médecin généraliste" value="Médecin généraliste" />
+            <Picker.Item label="Orthophoniste" value="Orthophoniste" />
+            <Picker.Item label="Infirmier/Infirmière" value="Infirmier/Infirmière" />
+            <Picker.Item label="Kinésithérapeute" value="Kinésithérapeute" />
+            <Picker.Item label="Sage-femme" value="Sage-femme" />
+            <Picker.Item label="Podologue" value="Podologue" />
+            <Picker.Item label="Psychologue" value="Psychologue" />
+            <Picker.Item label="Dentiste" value="Dentiste" />
+            <Picker.Item label="Ophtalmologue" value="Ophtalmologue" />
+            <Picker.Item label="Cardiologue" value="Cardiologue" />
+            <Picker.Item label="Autre" value="Autre" />
+          </Picker>
         </View>
       </View>
 
