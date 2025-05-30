@@ -35,7 +35,7 @@ export function useUserData() {
         throw new Error('Erreur lors de la récupération des données utilisateur');
       }
       
-      const userData = await response.json();
+      const userData: UserData = await response.json();
       setUser(userData);
       return userData;
     } catch (err) {

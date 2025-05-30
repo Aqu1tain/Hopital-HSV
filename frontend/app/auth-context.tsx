@@ -6,6 +6,8 @@ import config from '../config/config';
 interface UserData {
   id: string;
   email: string;
+  first_name: string;
+  last_name: string;
   role: 'patient' | 'practitioner';
   created_at: string;
   updated_at?: string;

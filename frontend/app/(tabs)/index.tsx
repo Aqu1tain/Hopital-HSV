@@ -446,17 +446,25 @@ const styles = StyleSheet.create({
     minHeight: 80,
     justifyContent: 'center',
   },
-  
+  splashText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#222',
+    fontFamily: 'Inter',
+  },
+  image: {
+    width: 100,
+    height: 100,
+  },
+  noDataText: {
+    fontSize: 14,        
+    fontWeight: '500',
+    color: '#444',
+    marginTop: 2,
+  },
   loadingPlaceholder: {
     height: 16,
     backgroundColor: '#e0e0e0',
     borderRadius: 4,
-  },
-  
-  noDataText: {
-    color: '#666',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginVertical: 10,
   },
 });
