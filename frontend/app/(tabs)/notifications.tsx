@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Check, X } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
 import config from '@/config/config';
@@ -27,18 +27,25 @@ const NotificationItem: React.FC<{
 }> = ({ item, showSectionHeader, onCancel, onMarkRead }) => {
   
   const handleCancelPress = () => {
-    Alert.alert(
-      'Annuler le rendez-vous',
-      'Êtes-vous sûr de vouloir annuler ce rendez-vous ?',
-      [
-        { text: 'Non', style: 'cancel' },
-        { 
-          text: 'Oui, annuler', 
-          style: 'destructive',
-          onPress: () => onCancel?.(item.id)
-        }
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?');
+      if (confirm) {
+        onCancel?.(item.id);
+      }
+    } else {
+      Alert.alert(  
+        'Annuler le rendez-vous',
+        'Êtes-vous sûr de vouloir annuler ce rendez-vous ?',
+        [
+          { text: 'Non', style: 'cancel' },
+          { 
+            text: 'Oui, annuler', 
+            style: 'destructive',
+            onPress: () => onCancel?.(item.id)
+          }
+        ]
+      );
+    }
   };
 
   // Parse message to extract key information
@@ -158,14 +165,26 @@ export default function NotificationsScreen() {
       if (response.ok) {
         // Refresh notifications to get updated status
         fetchNotifications(false);
-        Alert.alert('Succès', 'Rendez-vous annulé avec succès');
+        if (Platform.OS === 'web') {
+          window.alert('Rendez-vous annulé avec succès');
+        } else {
+          Alert.alert('Succès', 'Rendez-vous annulé avec succès');
+        }
       } else {
         const errorData = await response.json();
-        Alert.alert('Erreur', errorData.error || 'Impossible d\'annuler le rendez-vous');
+        if (Platform.OS === 'web') {
+          window.alert(errorData.error || 'Impossible d\'annuler le rendez-vous');
+        } else {
+          Alert.alert('Erreur', errorData.error || 'Impossible d\'annuler le rendez-vous');
+        }
       }
     } catch (error) {
       console.error('Error cancelling appointment:', error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors de l\'annulation');
+      if (Platform.OS === 'web') {
+        window.alert('Une erreur est survenue lors de l\'annulation');
+      } else {
+        Alert.alert('Erreur', 'Une erreur est survenue lors de l\'annulation');
+      }
     }
   };
 

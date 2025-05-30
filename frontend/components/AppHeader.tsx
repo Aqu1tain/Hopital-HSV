@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Bell, BellRing } from 'lucide-react-native'; // Add BellRing for filled bell
+import { Bell } from 'lucide-react-native';
 import { router, useRouter, usePathname } from 'expo-router'; // Add usePathname
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../app/auth-context';
@@ -85,7 +85,7 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
         <View style={styles.rightSection}>
           <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
             {isOnNotificationsPage ? (
-              <BellRing color="#222" size={22} style={styles.bellIcon} />
+              <Bell fill="#222" color="#222" size={22} style={styles.bellIcon} />
             ) : (
               <Bell color="#222" size={22} style={styles.bellIcon} />
             )}
@@ -128,7 +128,7 @@ export default function AppHeader({ showNotificationBadge = true }: AppHeaderPro
         ) : null}
         <TouchableOpacity onPress={handleBellPress} style={styles.bellContainer}>
           {isOnNotificationsPage ? (
-            <BellRing color="#222" size={22} style={styles.bellIcon} />
+            <Bell fill="#222" color="#222" size={22} style={styles.bellIcon} />
           ) : (
             <Bell color="#222" size={22} style={styles.bellIcon} />
           )}

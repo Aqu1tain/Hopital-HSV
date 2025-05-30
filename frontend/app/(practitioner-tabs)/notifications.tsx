@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Image, Alert, Platform } from 'react-native';
 import { Check, X, Filter } from 'lucide-react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AppHeader from '../../components/AppHeader';
@@ -32,33 +32,47 @@ const NotificationItem: React.FC<{
   
   const handleAcceptPress = () => {
     if (!item.appointment_id) return;
-    Alert.alert(
-      'Accepter le rendez-vous',
-      `Confirmer le rendez-vous avec ${item.patientName} ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Accepter', 
-          onPress: () => onAccept(item.appointment_id!)
-        }
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm(`Confirmer le rendez-vous avec ${item.patientName} ?`);
+      if (confirm) {
+        onAccept(item.appointment_id!);
+      }
+    } else {
+      Alert.alert(
+        'Accepter le rendez-vous',
+        `Confirmer le rendez-vous avec ${item.patientName} ?`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Accepter', 
+            onPress: () => onAccept(item.appointment_id!)
+          }
+        ]
+      );
+    }
   };
 
   const handleRejectPress = () => {
     if (!item.appointment_id) return;
-    Alert.alert(
-      'Refuser le rendez-vous',
-      `Refuser le rendez-vous avec ${item.patientName} ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Refuser', 
-          style: 'destructive',
-          onPress: () => onReject(item.appointment_id!)
-        }
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm(`Refuser le rendez-vous avec ${item.patientName} ?`);
+      if (confirm) {
+        onReject(item.appointment_id!);
+      }
+    } else {
+      Alert.alert(
+        'Refuser le rendez-vous',
+        `Refuser le rendez-vous avec ${item.patientName} ?`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { 
+            text: 'Refuser', 
+            style: 'destructive',
+            onPress: () => onReject(item.appointment_id!)
+          }
+        ]
+      );
+    }
   };
 
   const isPendingRequest = item.type === 'appointment_request' && item.status === 'pending';
