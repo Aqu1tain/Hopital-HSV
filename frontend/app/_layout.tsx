@@ -22,7 +22,9 @@ function LayoutContent() {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      if (segments[0] !== 'auth') router.replace('/auth');
+      if (segments[0] !== 'auth' && segments[0] !== 'practitioner-signup') {
+        router.replace('/auth');
+      }
       return;
     }
 
