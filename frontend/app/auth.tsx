@@ -157,7 +157,7 @@ export default function AuthScreen() {
         const [day, month, year] = birth_date.split('/');
         birth_date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
       }
-      const res = await fetch(`${config.API_URL}/signup/patient`, {
+      const res = await fetch(`${config.API_URL}/auth/signup/patient`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
