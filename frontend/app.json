@@ -8,18 +8,28 @@
     "scheme": "hopitalhsv",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.HopitalHSV"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.HopitalHSV"
+    },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    
     "splash": {
       "image": "./assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    
     "plugins": [
       "expo-router",
       [
@@ -27,8 +37,7 @@
         {
           "backgroundColor": "#ffffff",
           "image": "./assets/images/logo.png",
-          "dark":
-          {
+          "dark": {
             "image": "./assets/images/logo.png",
             "imageWidth": 200,
             "resizeMode": "contain",
