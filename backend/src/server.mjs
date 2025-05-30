@@ -389,6 +389,7 @@ app.get('/api/appointments/upcoming', authMiddleware, async (req, res) => {
       `)
       .or(`patient_id.eq.${userId},practitioner_id.eq.${userId}`)
       .gte('scheduled_at', today)
+      .neq('status', 'cancelled') // Exclude cancelled appointments
       .order('scheduled_at', { ascending: true });
 
     if (error) throw error;
@@ -400,7 +401,9 @@ app.get('/api/appointments/upcoming', authMiddleware, async (req, res) => {
   }
 });
 
+
 // Get past appointments for the current user
+
 app.get('/api/appointments/past', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -428,8 +431,9 @@ app.get('/api/appointments/past', authMiddleware, async (req, res) => {
       `)
       .or(`patient_id.eq.${userId},practitioner_id.eq.${userId}`)
       .lt('scheduled_at', today)
+      .neq('status', 'cancelled') // Exclude cancelled appointments
       .order('scheduled_at', { ascending: false })
-      .limit(20); // Increased limit to get more recent patients
+      .limit(20);
 
     if (error) throw error;
     
