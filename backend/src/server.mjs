@@ -1282,6 +1282,40 @@ app.get('/api/patients/medical-history', authMiddleware, async (req, res) => {
   }
 });
 
+// Update practitioner profile data
+app.patch('/api/practitioners/update', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    
+    // Verify user is a practitioner
+    if (req.user.role !== 'practitioner') {
+      return res.status(403).json({ error: 'Only practitioners can update practitioner data' });
+    }
+    
+    const updateData = req.body;
+    
+    // Update practitioner data
+    const { data: updatedPractitioner, error: updateError } = await supabase
+      .from('practitioners')
+      .update(updateData)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    
+      if (updateError) {
+        console.error('Error updating practitioner:', updateError);
+        return res.status(500).json({ error: 'Erreur lors de la mise à jour' });
+      }
+      
+      res.json({
+        success: true,
+        practitioner: updatedPractitioner
+      }); 
+  } catch (error) {
+    console.error('Error in /api/practitioners/update:', error);
+    res.status(500).json({ error: 'Erreur interne du serveur' });
+  }
+});
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
