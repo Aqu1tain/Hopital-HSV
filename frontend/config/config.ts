@@ -6,7 +6,7 @@ interface EnvironmentConfig {
   
   // Configuration pour l'environnement de développement
   const dev: EnvironmentConfig = {
-    API_URL: 'http://192.168.68.130:3000',
+    API_URL: 'http://localhost:3000',
   };
   
   // Configuration pour l'environnement de production
