@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import { Check, X } from 'lucide-react-native';
 import AppHeader from '../../components/AppHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Notification {
   id: string;
@@ -10,53 +11,18 @@ interface Notification {
   messageParts: { text: string; bold: boolean }[];
   cancellable?: boolean;
   read?: boolean;
-  showSectionHeader?: boolean;
 }
 
-const notifications: Notification[] = [
-  { 
-    id: '1', 
-    section: 'Aujourd’hui', 
-    time: '9h01', 
-    messageParts: [
-      { text: 'Le ', bold: false },
-      { text: 'Dr. Rozières', bold: true },
-      { text: ' a reçu votre demande de rendez-vous pour 10h', bold: false }
-    ], 
-    cancellable: true 
-  },
-  { 
-    id: '2', 
-    section: 'Hier', 
-    time: '8h48', 
-    messageParts: [
-      { text: 'M. Lanson', bold: true },
-      { text: ' a accepté votre demande de rendez-vous à 10h hier', bold: false }
-    ], 
-    read: true 
-  },
-  { 
-    id: '3', 
-    section: 'Hier', 
-    time: '8h40', 
-    messageParts: [
-      { text: 'Vous', bold: true },
-      { text: ' avez mis à jour votre profil', bold: false }
-    ] 
-  },
-];
-
-interface NotificationItemProps {
-  item: Notification;
+const NotificationItem: React.FC<{ 
+  item: Notification; 
   showSectionHeader?: boolean;
-}
-
-const NotificationItem: React.FC<NotificationItemProps> = ({ item }) => (
+  onCancel?: (id: string) => void;
+}> = ({ item, showSectionHeader, onCancel }) => (
   <View style={styles.notificationContainer}>
-    {item.showSectionHeader && <Text style={styles.sectionHeader}>{item.section}</Text>}
+    {showSectionHeader && <Text style={styles.sectionHeader}>{item.section}</Text>}
     <View style={styles.notification}>
       <View style={styles.notificationContent}>
-        {item.time ? <Text style={styles.time}>{item.time}</Text> : null}
+        <Text style={styles.time}>{item.time}</Text>
         <Text style={styles.message}>
           {item.messageParts.map((part, index) => (
             <Text key={index} style={part.bold ? styles.boldText : null}>
@@ -66,110 +32,213 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ item }) => (
         </Text>
       </View>
       {item.cancellable && (
-        <TouchableOpacity style={styles.cancelButton}>
+        <TouchableOpacity 
+          style={styles.cancelButton}
+          onPress={() => onCancel?.(item.id)}
+        >
           <Text style={styles.cancelText}>Annuler</Text>
         </TouchableOpacity>
       )}
       {item.read && (
-        <Ionicons name="checkmark-circle" size={24} color="green" style={styles.readIcon} />
+        <View style={styles.readIconContainer}>
+          <Check color="#34C759" size={20} />
+        </View>
       )}
     </View>
   </View>
 );
 
-const App = () => {
-  const [displayData, setDisplayData] = useState<Notification[]>([]);
+export default function NotificationsScreen() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const updatedData = notifications.map((item, index) => ({
-      ...item,
-      showSectionHeader: index === 0 || item.section !== notifications[index - 1]?.section,
-    }));
-    setDisplayData(updatedData);
+    fetchNotifications();
   }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/patient`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async (notificationId: string) => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/${notificationId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        // Remove the notification from the list
+        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      }
+    } catch (error) {
+      console.error('Error cancelling notification:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken');
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/notifications/mark-all-read`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      }
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const displayData = notifications.map((item, index) => ({
+    ...item,
+    showSectionHeader: index === 0 || item.section !== notifications[index - 1]?.section,
+  }));
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <AppHeader showNotificationBadge={false} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#5671DA" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <AppHeader />
-      <View style={styles.searchBarContainer}>
-        <TextInput
-          style={styles.searchBar}
-          placeholder="Tout marquer comme lu"
-          editable={false}
-        />
-      </View>
+      <AppHeader showNotificationBadge={false} />
+      <TouchableOpacity 
+        style={styles.markAllReadButton}
+        onPress={handleMarkAllAsRead}
+      >
+        <Text style={styles.markAllReadText}>Tout marquer comme lu</Text>
+      </TouchableOpacity>
       <FlatList
         data={displayData}
-        renderItem={({ item }) => <NotificationItem item={item} />}
+        renderItem={({ item }) => (
+          <NotificationItem 
+            item={item} 
+            showSectionHeader={item.showSectionHeader}
+            onCancel={handleCancel}
+          />
+        )}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
-  searchBarContainer: {
-    padding: 10,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  searchBar: {
-    backgroundColor: '#f0f0f0',
+  markAllReadButton: {
+    margin: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#F5F5F5',
     borderRadius: 20,
-    padding: 10,
-    fontSize: 12,
-    textAlign: 'center',
+    alignItems: 'center',
+  },
+  markAllReadText: {
+    fontSize: 15,
+    color: '#666',
+    fontFamily: 'Inter',
+  },
+  listContainer: {
+    paddingBottom: 20,
   },
   notificationContainer: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#666',
-    marginVertical: 10,
+    color: '#000',
+    marginTop: 16,
+    marginBottom: 12,
+    fontFamily: 'Inter-Bold',
   },
   notification: {
-    flexDirection: "row",
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    marginBottom: 10,
+    borderBottomColor: '#F0F0F0',
   },
   notificationContent: {
     flex: 1,
   },
   time: {
-    fontSize: 15,
-    color: '#666',
-    marginBottom: 5,
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 4,
+    fontFamily: 'Inter',
   },
   message: {
     fontSize: 15,
     color: '#000',
+    lineHeight: 20,
+    fontFamily: 'Inter',
   },
   boldText: {
     fontWeight: 'bold',
+    fontFamily: 'Inter-Bold',
   },
   cancelButton: {
-    backgroundColor: 'transparent',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    borderColor: '#5671DA',
+    marginLeft: 12,
   },
   cancelText: {
-    color: '#007AFF',
-    fontSize: 15,
-    fontWeight: 'bold',
+    color: '#5671DA',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
-  readIcon: {
-    marginLeft: 10,
+  readIconContainer: {
+    marginLeft: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
-
-export default App;
