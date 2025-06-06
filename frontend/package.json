@@ -41,7 +41,7 @@
     "jwt-decode": "^4.0.0",
     "lucide-react-native": "^0.511.0",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react-dom": "19.1.0",
     "react-native": "0.79.2",
     "react-native-date-picker": "^5.0.12",
     "react-native-gesture-handler": "~2.24.0",
